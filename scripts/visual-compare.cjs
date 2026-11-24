@@ -85,6 +85,18 @@ async function run() {
     // Give squircle ResizeObserver and layout a moment to settle
     await page.waitForTimeout(600);
 
+    if (stepName === 'step4_add') {
+      // Open add sheet
+      await page.click('[data-act="expense"]');
+      await page.waitForTimeout(600);
+    } else if (stepName === 'step4_dp') {
+      // Open add sheet then date picker
+      await page.click('[data-act="expense"]');
+      await page.waitForTimeout(400);
+      await page.click('#a-date');
+      await page.waitForTimeout(600);
+    }
+
     const outPath = path.join(outDir, outName);
     await page.screenshot({ path: outPath, fullPage: false });
     return outPath;

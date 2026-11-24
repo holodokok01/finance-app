@@ -88,15 +88,24 @@ export interface SquircleProps extends Omit<React.AllHTMLAttributes<HTMLElement>
   children?: React.ReactNode;
 }
 
-export const Squircle: React.FC<SquircleProps> = ({
+export const Squircle = React.forwardRef<HTMLElement, SquircleProps>(({
   r,
   as: Component = 'div',
   className = '',
   style,
   children,
   ...props
-}) => {
-  const elRef = useRef<HTMLElement>(null);
+}, forwardedRef) => {
+  const elRef = useRef<HTMLElement | null>(null);
+
+  const setRef = (node: HTMLElement | null) => {
+    elRef.current = node;
+    if (typeof forwardedRef === 'function') {
+      forwardedRef(node);
+    } else if (forwardedRef) {
+      (forwardedRef as React.MutableRefObject<HTMLElement | null>).current = node;
+    }
+  };
 
   useEffect(() => {
     const el = elRef.current;
@@ -141,7 +150,7 @@ export const Squircle: React.FC<SquircleProps> = ({
 
   return (
     <Component
-      ref={elRef}
+      ref={setRef}
       className={`sq ${className}`}
       data-sq
       data-r={String(r)}
@@ -151,4 +160,6 @@ export const Squircle: React.FC<SquircleProps> = ({
       {children}
     </Component>
   );
-};
+});
+
+Squircle.displayName = 'Squircle';
