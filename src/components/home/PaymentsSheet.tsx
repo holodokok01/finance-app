@@ -35,7 +35,7 @@ export const PaymentsSheet: React.FC<PaymentsSheetProps> = ({ open, onClose, onE
   useSettingsStore(s => s.lang); // перерисовка при смене языка
 
   const hp = useCallback((k: Parameters<typeof haptic>[0]) => haptic(k, hapticOn), [hapticOn]);
-  const { rendered, show, height, kb } = useSheetPresence(open, () => hp('light'));
+  const { rendered, show, height, kb, oy } = useSheetPresence(open, () => hp('light'));
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -214,7 +214,7 @@ export const PaymentsSheet: React.FC<PaymentsSheetProps> = ({ open, onClose, onE
       className={`detail cs${show ? ' show' : ''}`}
       id="py"
       aria-hidden={!show}
-      style={{ height: height ? height + 'px' : undefined, ['--kb' as string]: kb + 'px' }}
+      style={{ height: height ? height + 'px' : undefined, ['--kb' as string]: kb + 'px', transform: oy ? 'translateY(' + oy + 'px)' : undefined }}
     >
       <div className="detail-dim" id="py-dim" onClick={close} />
       <Squircle r="32 32 0 0" className="detail-panel cs-panel cm-panel" id="py-panel" ref={panelRef as any}>

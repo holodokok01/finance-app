@@ -15,8 +15,8 @@ const readFull = () => {
  * iOS не всегда присылает resize при закрытии клавиатуры, поэтому на focusout kb сбрасывается сразу
  * и проверяется ещё раз позже.
  */
-export function useKeyboardInset(active: boolean): { height: number; kb: number } {
-  const [state, setState] = useState({ height: 0, kb: 0 });
+export function useKeyboardInset(active: boolean): { height: number; kb: number; oy: number } {
+  const [state, setState] = useState({ height: 0, kb: 0, oy: 0 });
 
   useEffect(() => {
     if (!active) return;
@@ -24,11 +24,22 @@ export function useKeyboardInset(active: boolean): { height: number; kb: number 
     const measure = () => {
       const full = readFull();
       let kb = 0;
+      let oy = 0;
       if (vv) {
-        const shrink = Math.round(full - vv.height - vv.offsetTop);
+        // iOS при фокусе сдвигает видимую область вниз (offsetTop), а fixed-слой остаётся на месте:
+        // как в эталоне, двигаем слой вслед за видимой областью и возвращаем прокрутку страницы
+        oy = Math.max(0, Math.round(vv.offsetTop));
+        const shrink = Math.round(full - vv.height);
         kb = shrink > 80 ? shrink : 0;
       }
-      setState(s => (s.height === full && s.kb === kb ? s : { height: full, kb }));
+      if (oy > 0 || window.pageYOffset > 0) {
+        try {
+          window.scrollTo(0, 0);
+        } catch (e) {
+          /* ignore */
+        }
+      }
+      setState(s => (s.height === full && s.kb === kb && s.oy === oy ? s : { height: full, kb, oy }));
     };
     const onOrient = () => {
       fullH = 0;
@@ -36,7 +47,12 @@ export function useKeyboardInset(active: boolean): { height: number; kb: number 
     };
     let timers: ReturnType<typeof setTimeout>[] = [];
     const onFocusOut = () => {
-      setState(s => (s.kb === 0 ? s : { ...s, kb: 0 }));
+      setState(s => (s.kb === 0 && s.oy === 0 ? s : { ...s, kb: 0, oy: 0 }));
+      try {
+        window.scrollTo(0, 0);
+      } catch (e) {
+        /* ignore */
+      }
       timers.forEach(clearTimeout);
       timers = [setTimeout(measure, 250), setTimeout(measure, 700)];
     };

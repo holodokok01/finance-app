@@ -117,7 +117,7 @@ export const TransactionDetailSheet: React.FC<TransactionDetailSheetProps> = ({ 
   }, [isOpen]);
 
   // Высота шита полная, клавиатура поднимает панель через --kb
-  const { height, kb } = useKeyboardInset(rendered);
+  const { height, kb, oy } = useKeyboardInset(rendered);
 
   // Операция удалена снаружи (например undo-цепочкой): закрываем
   useEffect(() => {
@@ -184,7 +184,7 @@ export const TransactionDetailSheet: React.FC<TransactionDetailSheetProps> = ({ 
       className={`detail ${show ? 'show' : ''}`}
       id="detail"
       aria-hidden={!show}
-      style={{ height: height ? height + 'px' : undefined, ['--kb' as string]: kb + 'px' }}
+      style={{ height: height ? height + 'px' : undefined, ['--kb' as string]: kb + 'px', transform: oy ? 'translateY(' + oy + 'px)' : undefined }}
     >
       <div className="detail-dim" id="detail-dim" onClick={close} />
       <Squircle r="32 32 0 0" className="detail-panel" id="detail-panel" ref={panelRef as any}>

@@ -31,7 +31,7 @@ export function useSheetPresence(open: boolean, onShow?: () => void) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const { height, kb } = useKeyboardInset(rendered);
+  const { height, kb, oy } = useKeyboardInset(rendered);
 
   // Страница под шитом не скроллится; счётчик, чтобы вложенные шиты не снимали блок друг у друга
   useEffect(() => {
@@ -48,5 +48,5 @@ export function useSheetPresence(open: boolean, onShow?: () => void) {
     };
   }, [open]);
 
-  return { rendered, show, height, kb };
+  return { rendered, show, height, kb, oy };
 }
