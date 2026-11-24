@@ -76,6 +76,19 @@ export function squirclePath(w: number, h: number, R: number[], s = SMOOTHING): 
   return out.join(' ');
 }
 
+/** Тот же путь, сдвинутый на (ox, oy): абсолютные только M и L. */
+export function squirclePathAt(x: number, y: number, w: number, h: number, R: number[]): string {
+  const t = squirclePath(w, h, R).split(' ');
+  for (let i = 0; i < t.length; i++) {
+    if (t[i] === 'M' || t[i] === 'L') {
+      t[i + 1] = String(Math.round((parseFloat(t[i + 1]) + x) * 100) / 100);
+      t[i + 2] = String(Math.round((parseFloat(t[i + 2]) + y) * 100) / 100);
+      i += 2;
+    }
+  }
+  return t.join(' ');
+}
+
 export function parseRadii(val?: number | string): number[] {
   if (typeof val === 'number') return [val, val, val, val];
   const parts = String(val || '0').split(/\s+/).map(x => parseInt(x, 10) || 0);

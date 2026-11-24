@@ -99,24 +99,44 @@ export function usePressFeedback() {
         anim: null,
       });
 
-      p.t = setTimeout(() => down(p), 30);
+      // В прокручиваемых списках ждём дольше: если палец поехал (свайп или скролл), нажатия не будет вовсе
+      const inScroll = !!el.closest('.sheet-scroll, .detail-panel, .cv-list, .st-list, .py-list');
+      p.t = setTimeout(() => down(p), inScroll ? 120 : 30);
       if (e.pointerType === 'mouse') {
         el.addEventListener('pointerleave', release, { once: true });
       }
     };
 
     const onPointerMove = (e: PointerEvent) => {
-      if (cur && Math.abs(e.clientX - cur.x) + Math.abs(e.clientY - cur.y) > 12) {
-        release();
+      if (cur && Math.abs(e.clientX - cur.x) + Math.abs(e.clientY - cur.y) > 5) {
+        cancelPress();
       }
     };
+
+    // Палец поехал: нажатие отменяется без пружины, чтобы не дёргать строку во время свайпа
+    function cancelPress() {
+      const p = cur;
+      if (!p) return;
+      cur = null;
+      if (p.t) {
+        clearTimeout(p.t);
+        p.t = 0;
+        return;
+      }
+      if (!p.anim) return;
+      const a = p.tgt.animate([{ scale: nowScale(p.tgt) }, { scale: '1' }], { duration: 120, easing: EASE_IN, fill: 'forwards' });
+      p.anim.cancel();
+      p.anim = null;
+      a.onfinish = a.oncancel = () => a.cancel();
+    }
 
     const onPointerEnd = () => release();
 
     document.addEventListener('pointerdown', onPointerDown, true);
     document.addEventListener('pointermove', onPointerMove, { passive: true, capture: true });
     document.addEventListener('pointerup', onPointerEnd, true);
-    document.addEventListener('pointercancel', onPointerEnd, true);
+    const onPointerCancel = () => cancelPress();
+    document.addEventListener('pointercancel', onPointerCancel, true);
     document.addEventListener('dragstart', onPointerEnd, true);
     window.addEventListener('blur', release);
 
@@ -124,7 +144,7 @@ export function usePressFeedback() {
       document.removeEventListener('pointerdown', onPointerDown, true);
       document.removeEventListener('pointermove', onPointerMove, true);
       document.removeEventListener('pointerup', onPointerEnd, true);
-      document.removeEventListener('pointercancel', onPointerEnd, true);
+      document.removeEventListener('pointercancel', onPointerCancel, true);
       document.removeEventListener('dragstart', onPointerEnd, true);
       window.removeEventListener('blur', release);
     };

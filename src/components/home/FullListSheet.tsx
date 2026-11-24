@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Squircle } from '../ui/Squircle';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Squircle, squirclePathAt } from '../ui/Squircle';
 import { TransactionRow } from './TransactionRow';
 import { useAppStore } from '../../store/useAppStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -60,6 +60,8 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
   const closeFastRef = useRef(false);
   const rafPending = useRef(false);
   const dragT = useRef(0);
+  const shiftedRows = useRef<HTMLElement[]>([]);
+  const pendingOpen = useRef(false);
   const searchingRef = useRef(false);
   const exitSearchRef = useRef<() => void>(() => {});
   const onCloseRef = useRef(onClose);
@@ -108,7 +110,37 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
     sheet.style.height = v.h + 'px';
   };
 
-  /** p = 0: шит совпадает с карточкой, p = 1: на весь экран. */
+  /* Раскладка списка во время движения не меняется. Первые строки сдвигаются transform-ом
+     от своих мест в карточке к местам в списке, остальные едут вместе с третьей.
+     Замер один раз перед движением, когда шит в покое. */
+  const measure = () => {
+    const body = bodyRef.current;
+    const sheet = sheetRef.current;
+    const card = cardEl();
+    if (!body || !sheet) return;
+    body.classList.remove('moving');
+    shiftedRows.current.forEach(r => r.style.removeProperty('--dy'));
+    shiftedRows.current = [];
+    const listEl = sheet.querySelector('#sheet-list') as HTMLElement | null;
+    if (!listEl) return;
+    const bodyTop = body.getBoundingClientRect().top;
+    const listRows = Array.from(listEl.querySelectorAll('.row')).slice(0, 3) as HTMLElement[];
+    const cardRows = card ? (Array.from(card.querySelectorAll('.row')) as HTMLElement[]) : [];
+    const cardTop = card ? card.getBoundingClientRect().top : 0;
+    let rest = 0;
+    listRows.forEach((r, i) => {
+      const cr = cardRows[i];
+      if (!cr) return;
+      const dy = Math.round(cr.getBoundingClientRect().top - cardTop - (r.getBoundingClientRect().top - bodyTop));
+      r.style.setProperty('--dy', dy + 'px');
+      shiftedRows.current.push(r);
+      rest = dy;
+    });
+    listEl.style.setProperty('--dyrest', rest + 'px');
+    sheet.style.setProperty('--px', Math.max(0, geo.current.c.x - geo.current.v.x) + 'px');
+  };
+
+  /** p = 0: шит совпадает с карточкой, p = 1: на весь экран. Только transform, opacity и clip. */
   const draw = (p: number) => {
     const sheet = sheetRef.current;
     const body = bodyRef.current;
@@ -117,18 +149,21 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
     const v = geo.current.v;
     const c = geo.current.c;
     const k = 1 - p;
-    const top = Math.round(Math.max(0, c.y - v.y) * k);
-    const left = Math.round(Math.max(0, c.x - v.x) * k);
-    const right = Math.round(Math.max(0, v.x + v.w - c.x - c.w) * k);
-    const bottom = Math.round(Math.max(0, v.y + v.h - c.y - c.h) * k);
-    const r = Math.round(32 * k);
-    sheet.style.clipPath = p >= 1 ? 'none' : `inset(${top}px ${right}px ${bottom}px ${left}px round ${r}px)`;
-    body.style.transform = `translate3d(0, ${Math.round((c.y - v.y) * k)}px, 0)`;
-    sheet.style.setProperty('--px', Math.round(Math.max(0, c.x - v.x) * k) + 'px');
-    sheet.style.setProperty('--lab', String(Math.round(p * 40)));
-    // при p = 0 строки лежат ровно как в карточке: зазор между днями 4px, подпись схлопнута без зазора
-    sheet.style.setProperty('--gap', Math.round(4 + p * 4) + 'px');
-    sheet.style.setProperty('--dm', Math.round((1 - p) * 4) + 'px');
+    const moving = p < 1;
+    body.classList.toggle('moving', moving);
+    if (moving) {
+      const x = Math.max(0, c.x - v.x) * k;
+      const y = Math.max(0, c.y - v.y) * k;
+      const w = v.w - x - Math.max(0, v.x + v.w - c.x - c.w) * k;
+      const h = v.h - y - Math.max(0, v.y + v.h - c.y - c.h) * k;
+      const r = 32 * k;
+      sheet.style.clipPath = `path('${squirclePathAt(x, y, w, h, [r, r, r, r])}')`;
+    } else {
+      sheet.style.clipPath = 'none';
+    }
+    body.style.transform = moving ? `translate3d(0, ${(c.y - v.y) * k}px, 0)` : '';
+    sheet.style.setProperty('--k', String(k));
+    sheet.style.setProperty('--p', String(p));
     if (headARef.current) headARef.current.style.opacity = String(clamp01(1 - p * 2.2));
     if (headBRef.current) {
       headBRef.current.style.opacity = String(clamp01((p - 0.45) * 1.8));
@@ -157,37 +192,57 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
 
   const openSheet = () => {
     if (st.current.open) return;
+    st.current.open = true;
+    st.current.busy = true;
     geo.current = { v: viewRect(), c: cardRect() };
     placeSheet(geo.current.v);
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
-    draw(0);
+    pendingOpen.current = true;
     setShown(true);
+    hp('light');
+  };
+
+  // Первый кадр в позиции карточки ставим до отрисовки, иначе мелькает шит на весь экран
+  useLayoutEffect(() => {
+    if (!shown || !pendingOpen.current) return;
+    pendingOpen.current = false;
+    measure();
+    draw(0);
     const card = cardEl();
     if (card) card.style.visibility = 'hidden';
-    st.current.open = true;
-    hp('light');
     animateTo(1, 460, () => {
       // остальные строки дорисовываем, когда движение уже закончилось
       requestAnimationFrame(() => setLimit(Infinity));
     });
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shown]);
 
   const closeSheet = (fast: boolean) => {
     if (!st.current.open) return;
     if (searchingRef.current) exitSearchRef.current();
     const sc = scrollRef.current;
     const run = () => {
-      geo.current = { v: viewRect(), c: cardRect() };
       hp('light');
-      animateTo(0, fast ? 280 : 400, () => {
-        setShown(false);
-        setFxOn(false);
+      // после сброса поиска ждём кадр, чтобы список успел перерисоваться
+      requestAnimationFrame(() => {
+        if (pRef.current >= 1) {
+          geo.current = { v: viewRect(), c: cardRect() };
+          measure();
+        }
+        animateTo(0, fast ? 280 : 400, finish);
+      });
+    };
+    const finish = () => {
+        // подмена в том же кадре: карточка появляется, шит прячется
         const card = cardEl();
         if (card) card.style.visibility = '';
+        sheetRef.current?.classList.remove('show');
+        bodyRef.current?.classList.remove('moving');
+        setShown(false);
+        setFxOn(false);
         st.current.open = false;
         // пока шит скрыт, возвращаем короткий список для следующего открытия
         setTimeout(() => setLimit(FIRST_ROWS), 50);
-      });
     };
     if (sc && sc.scrollTop > 0) {
       // список был прокручен: сначала быстро к началу (240 мс), потом сворачиваем, без скачка
@@ -283,9 +338,12 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
           armed = false;
           return;
         }
+        // сразу гасим родную «резинку» iOS, иначе она дерётся с анимацией
+        if (e.cancelable) e.preventDefault();
         if (dy < 8) return;
         dragging = true;
         geo.current = { v: viewRect(), c: cardRect() };
+        measure();
         if (document.activeElement && (document.activeElement as HTMLElement).blur) {
           (document.activeElement as HTMLElement).blur();
         }
@@ -295,7 +353,7 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
       vel = (y - lastY) / Math.max(1, now - lastT);
       lastY = y;
       lastT = now;
-      const t = Math.min(1, Math.max(0, dy / 360));
+      const t = clamp01((dy - 8) / 360);
       if (!rafPending.current) {
         rafPending.current = true;
         requestAnimationFrame(() => {
