@@ -54,8 +54,8 @@ describe('paySorted и fmtMoney', () => {
     expect(paySorted(src).map(p => p.id)).toEqual(['b', 'a']);
     expect(src[0].id).toBe('a');
   });
-  it('форматирует сумму с пробелом разряда и неразрывным символом', () => {
-    expect(fmtMoney(1200.5, '€')).toBe('1 200,50 €');
-    expect(fmtMoney(15, '€')).toBe('15 €');
+  it('форматирует сумму: неразрывный пробел разряда и перед символом', () => {
+    expect(fmtMoney(1200.5, '€')).toBe('1\u00a0200,50\u00a0€');
+    expect(fmtMoney(15, '€')).toBe('15\u00a0€');
   });
 });
