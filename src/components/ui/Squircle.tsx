@@ -82,7 +82,7 @@ export function parseRadii(val?: number | string): number[] {
   return parts.length === 4 ? parts : [parts[0], parts[0], parts[0], parts[0]];
 }
 
-export interface SquircleProps extends React.HTMLAttributes<HTMLElement> {
+export interface SquircleProps extends Omit<React.AllHTMLAttributes<HTMLElement>, 'as'> {
   r: number | string;
   as?: React.ElementType;
   children?: React.ReactNode;
