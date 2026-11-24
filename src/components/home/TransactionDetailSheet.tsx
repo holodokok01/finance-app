@@ -9,7 +9,8 @@ import { useHoldToDelete } from '../../hooks/useHoldToDelete';
 import { haptic } from '../../services/telegram';
 import { formatCurrency, groupThousands, postSym, preSym, symOf } from '../../lib/balance';
 import { CHECK } from '../../assets/icons';
-import { L, LOC } from '../../i18n';
+import { L } from '../../i18n';
+import { dayLabel } from '../../lib/dayLabel';
 import { Transaction } from '../../types/fin';
 
 const DAY = 86400000;
@@ -42,14 +43,6 @@ const Pencil: React.FC = () => (
     <path d={PENCIL_PATH} />
   </svg>
 );
-
-function dayLabel(offset: number): string {
-  if (offset === 0) return L('Сегодня');
-  if (offset === 1) return L('Вчера');
-  const dt = new Date();
-  dt.setDate(dt.getDate() - offset);
-  return dt.toLocaleDateString(LOC[useSettingsStore.getState().lang || 'ru'], { day: 'numeric', month: 'long' });
-}
 
 export const TransactionDetailSheet: React.FC<TransactionDetailSheetProps> = ({ txId, onClose, onEdit }) => {
   const transactions = useAppStore(s => s.transactions);

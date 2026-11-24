@@ -6,6 +6,7 @@ import { initTelegramSdk } from './services/telegram';
 import { AppLayout } from './components/layout/AppLayout';
 import { HomeScreen } from './components/home/HomeScreen';
 import { AddTransactionSheet } from './components/home/AddTransactionSheet';
+import { FullListSheet } from './components/home/FullListSheet';
 import { TransactionDetailSheet } from './components/home/TransactionDetailSheet';
 import { Transaction } from './types/fin';
 
@@ -19,6 +20,7 @@ export const App: React.FC = () => {
   const [addType, setAddType] = useState<'expense' | 'income'>('expense');
   const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [detailId, setDetailId] = useState<number | null>(null);
+  const [listOpen, setListOpen] = useState(false);
 
   useEffect(() => {
     themeApply();
@@ -63,8 +65,14 @@ export const App: React.FC = () => {
         <HomeScreen
           onAddClick={handleOpenAdd}
           onSelectTransaction={handleSelectTransaction}
+          onOpenOperations={() => setListOpen(true)}
         />
       </AppLayout>
+      <FullListSheet
+        open={listOpen}
+        onClose={() => setListOpen(false)}
+        onSelectTransaction={handleSelectTransaction}
+      />
       <TransactionDetailSheet
         txId={detailId}
         onClose={() => setDetailId(null)}
