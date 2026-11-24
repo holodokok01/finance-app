@@ -100,8 +100,7 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
     const W = document.documentElement.clientWidth;
     const H = Math.min(
       window.innerHeight,
-      document.documentElement.clientHeight || 99999,
-      window.visualViewport ? Math.round(window.visualViewport.height) : 99999
+      document.documentElement.clientHeight || 99999
     );
     const w = Math.min(480, W);
     return { x: Math.round((W - w) / 2), y: 0, w, h: H };
@@ -293,11 +292,20 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
       placeSheet(geo.current.v);
       draw(pRef.current);
     };
+    // клавиатура iOS сжимает visualViewport и не всегда шлёт resize при закрытии,
+    // поэтому высота шита от неё не зависит; перепроверяем после закрытия клавиатуры
+    const later = () => {
+      fit();
+      setTimeout(fit, 250);
+      setTimeout(fit, 700);
+    };
     window.addEventListener('resize', fit);
-    window.visualViewport?.addEventListener('resize', fit);
+    window.addEventListener('orientationchange', later);
+    document.addEventListener('focusout', later);
     return () => {
       window.removeEventListener('resize', fit);
-      window.visualViewport?.removeEventListener('resize', fit);
+      window.removeEventListener('orientationchange', later);
+      document.removeEventListener('focusout', later);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
