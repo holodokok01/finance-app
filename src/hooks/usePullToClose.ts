@@ -1,13 +1,15 @@
-import { useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { haptic } from '../services/telegram';
 
 interface UsePullToCloseOptions {
   onClose: () => void;
   threshold?: number;
   enabled?: boolean;
+  /** Если прокручивается не сама панель, а вложенный блок */
+  scrollRef?: React.RefObject<HTMLElement>;
 }
 
-export function usePullToClose({ onClose, threshold = 110, enabled = true }: UsePullToCloseOptions) {
+export function usePullToClose({ onClose, threshold = 110, enabled = true, scrollRef }: UsePullToCloseOptions) {
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -22,12 +24,14 @@ export function usePullToClose({ onClose, threshold = 110, enabled = true }: Use
     let armed = false;
     let dragging = false;
 
+    const top = () => (scrollRef && scrollRef.current ? scrollRef.current.scrollTop : panel.scrollTop);
+
     const onTouchStart = (e: TouchEvent) => {
       if (e.touches.length !== 1 || (e.target as HTMLElement).closest('input, textarea, [contenteditable]')) {
         armed = false;
         return;
       }
-      armed = panel.scrollTop <= 0;
+      armed = top() <= 0;
       dragging = false;
       y0 = lastY = e.touches[0].clientY;
       lastT = performance.now();
@@ -37,11 +41,15 @@ export function usePullToClose({ onClose, threshold = 110, enabled = true }: Use
 
     const onTouchMove = (e: TouchEvent) => {
       if (!armed) return;
+      if (e.defaultPrevented) {
+        armed = false; // жест забрал вложенный элемент (например, свайп строки)
+        return;
+      }
       const y = e.touches[0].clientY;
       dy = y - y0;
 
       if (!dragging) {
-        if (panel.scrollTop > 0 || dy < 0) {
+        if (top() > 0 || dy < 0) {
           armed = false;
           return;
         }
@@ -87,7 +95,7 @@ export function usePullToClose({ onClose, threshold = 110, enabled = true }: Use
       panel.removeEventListener('touchend', onTouchEnd);
       panel.removeEventListener('touchcancel', onTouchEnd);
     };
-  }, [enabled, onClose, threshold]);
+  }, [enabled, onClose, threshold, scrollRef]);
 
   return { panelRef };
 }

@@ -1,6 +1,7 @@
 import { RecurringPayment, RecurringPeriod } from '../types/fin';
 import { L, plural } from '../i18n';
 import { LangCode } from '../types/settings';
+import { groupThousands } from './balance';
 
 export const PER_K: Record<RecurringPeriod, number> = {
   week: 52 / 12,
@@ -65,4 +66,31 @@ export function calcFreeBalance(balance: number, payments: RecurringPayment[], t
   }
 
   return Math.round(b * 100) / 100;
+}
+
+/** Сумма платежа как в списках: 1 200,50 € */
+export function fmtMoney(v: number, sym: string): string {
+  const a = Math.round(Math.abs(v) * 100);
+  const c = a % 100;
+  return groupThousands(Math.floor(a / 100)) + (c ? ',' + ('0' + c).slice(-2) : '') + '\u00a0' + sym;
+}
+
+/** Чистит ввод суммы: цифры и одна запятая, до 2 знаков после неё, до 7 до неё */
+export function cleanAmountInput(raw: string): string {
+  let c = raw.replace(/[^\d.,]/g, '').replace('.', ',');
+  const i = c.indexOf(',');
+  if (i >= 0) c = c.slice(0, i + 1) + c.slice(i + 1).replace(/,/g, '').slice(0, 2);
+  if (c.replace(/,.*/, '').length > 7) c = c.slice(0, 7) + (i >= 0 && i <= 7 ? c.slice(i) : '');
+  return c;
+}
+
+/** Разбор суммы из поля: 0 если пусто или не число */
+export function parseAmount(raw: string): number {
+  const v = Math.round(parseFloat((raw || '').replace(/\s/g, '').replace(',', '.')) * 100) / 100;
+  return v > 0 ? v : 0;
+}
+
+/** Платёж по возрастанию даты следующей оплаты */
+export function paySorted(list: RecurringPayment[]): RecurringPayment[] {
+  return list.slice().sort((a, b) => a.next - b.next);
 }

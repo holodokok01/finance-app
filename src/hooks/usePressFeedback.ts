@@ -19,7 +19,7 @@ export function usePressFeedback() {
       if (el.matches('.row, .sm-row, .st-tip, .fp-row, .d-row, .mn-row')) return '0.95';
       if (el.matches('.pbtn, .action')) return '0.92';
       if (el.matches('.a-keys button, .a-ops button, .cv-keys button')) return '0.86';
-      if (el.matches('.cv-in, .cva-row, .set-row')) return '0.95';
+      if (el.matches('.cv-in, .cm-in, .cva-row, .set-row')) return '0.95';
       return '0.88';
     }
 

@@ -8,7 +8,9 @@ import { HomeScreen } from './components/home/HomeScreen';
 import { AddTransactionSheet } from './components/home/AddTransactionSheet';
 import { FullListSheet } from './components/home/FullListSheet';
 import { TransactionDetailSheet } from './components/home/TransactionDetailSheet';
-import { Transaction } from './types/fin';
+import { PaymentsSheet } from './components/home/PaymentsSheet';
+import { PaymentEditorSheet } from './components/home/PaymentEditorSheet';
+import { Transaction, RecurringPayment } from './types/fin';
 
 export const App: React.FC = () => {
   const themeApply = useSettingsStore(s => s.themeApply);
@@ -21,6 +23,8 @@ export const App: React.FC = () => {
   const [editTx, setEditTx] = useState<Transaction | null>(null);
   const [detailId, setDetailId] = useState<number | null>(null);
   const [listOpen, setListOpen] = useState(false);
+  const [payOpen, setPayOpen] = useState(false);
+  const [payEdit, setPayEdit] = useState<{ id: string | null } | null>(null);
 
   useEffect(() => {
     themeApply();
@@ -66,6 +70,8 @@ export const App: React.FC = () => {
           onAddClick={handleOpenAdd}
           onSelectTransaction={handleSelectTransaction}
           onOpenOperations={() => setListOpen(true)}
+          onOpenPayments={() => setPayOpen(true)}
+          onSelectPayment={(p: RecurringPayment) => setPayEdit({ id: p.id })}
         />
       </AppLayout>
       <FullListSheet
@@ -73,6 +79,8 @@ export const App: React.FC = () => {
         onClose={() => setListOpen(false)}
         onSelectTransaction={handleSelectTransaction}
       />
+      <PaymentsSheet open={payOpen} onClose={() => setPayOpen(false)} onEdit={id => setPayEdit({ id })} />
+      <PaymentEditorSheet target={payEdit} onClose={() => setPayEdit(null)} />
       <TransactionDetailSheet
         txId={detailId}
         onClose={() => setDetailId(null)}
