@@ -126,7 +126,9 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
     body.style.transform = `translate3d(0, ${Math.round((c.y - v.y) * k)}px, 0)`;
     sheet.style.setProperty('--px', Math.round(Math.max(0, c.x - v.x) * k) + 'px');
     sheet.style.setProperty('--lab', String(Math.round(p * 40)));
-    sheet.style.setProperty('--gap', Math.round(p * 8) + 'px');
+    // при p = 0 строки лежат ровно как в карточке: зазор между днями 4px, подпись схлопнута без зазора
+    sheet.style.setProperty('--gap', Math.round(4 + p * 4) + 'px');
+    sheet.style.setProperty('--dm', Math.round((1 - p) * 4) + 'px');
     if (headARef.current) headARef.current.style.opacity = String(clamp01(1 - p * 2.2));
     if (headBRef.current) {
       headBRef.current.style.opacity = String(clamp01((p - 0.45) * 1.8));
@@ -141,7 +143,7 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
     st.current.busy = true;
     const frame = (now: number) => {
       if (token !== animToken.current) return;
-      const t = Math.min(1, (now - start) / ms);
+      const t = clamp01((now - start) / ms);
       const e = 1 - Math.pow(1 - t, 3);
       draw(from + (to - from) * e);
       if (t < 1) requestAnimationFrame(frame);
@@ -173,18 +175,37 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
   const closeSheet = (fast: boolean) => {
     if (!st.current.open) return;
     if (searchingRef.current) exitSearchRef.current();
-    if (scrollRef.current && scrollRef.current.scrollTop > 0) scrollRef.current.scrollTop = 0;
-    geo.current = { v: viewRect(), c: cardRect() };
-    hp('light');
-    animateTo(0, fast ? 280 : 400, () => {
-      setShown(false);
-      setFxOn(false);
-      const card = cardEl();
-      if (card) card.style.visibility = '';
-      st.current.open = false;
-      // пока шит скрыт, возвращаем короткий список для следующего открытия
-      setTimeout(() => setLimit(FIRST_ROWS), 50);
-    });
+    const sc = scrollRef.current;
+    const run = () => {
+      geo.current = { v: viewRect(), c: cardRect() };
+      hp('light');
+      animateTo(0, fast ? 280 : 400, () => {
+        setShown(false);
+        setFxOn(false);
+        const card = cardEl();
+        if (card) card.style.visibility = '';
+        st.current.open = false;
+        // пока шит скрыт, возвращаем короткий список для следующего открытия
+        setTimeout(() => setLimit(FIRST_ROWS), 50);
+      });
+    };
+    if (sc && sc.scrollTop > 0) {
+      // список был прокручен: сначала быстро к началу (240 мс), потом сворачиваем, без скачка
+      st.current.busy = true;
+      const from = sc.scrollTop;
+      const t0 = performance.now();
+      const step = (now: number) => {
+        const t = clamp01((now - t0) / 240);
+        sc.scrollTop = Math.round(from * Math.pow(1 - t, 3));
+        if (t < 1) requestAnimationFrame(step);
+        else {
+          sc.scrollTop = 0;
+          st.current.busy = false;
+          run();
+        }
+      };
+      requestAnimationFrame(step);
+    } else run();
   };
 
   useEffect(() => {

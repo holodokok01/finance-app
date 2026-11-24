@@ -718,6 +718,6 @@ input { caret-color: var(--accent); }
 .sheet .sheet-body { display: flex; flex-direction: column; height: 100%; min-height: 0; will-change: transform; }
 .sheet .sheet-top { margin: 0 calc(16px + var(--px)); }
 .sheet .sheet-scroll { padding-left: calc(16px + var(--px)); padding-right: calc(16px + var(--px)); }
-.sheet .day { content-visibility: auto; contain-intrinsic-size: auto 280px; }
-.sheet .day:first-child { content-visibility: visible; }
+.sheet .day:nth-child(n+6) { content-visibility: auto; contain-intrinsic-size: auto 280px; }
+.sheet .day-label { margin-bottom: calc(var(--dm, 0px) * -1); }
 
