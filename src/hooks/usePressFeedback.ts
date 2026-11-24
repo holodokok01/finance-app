@@ -14,13 +14,13 @@ export function usePressFeedback() {
     }
 
     function amount(el: HTMLElement): string {
-      if (el.classList.contains('bcol')) return '0.6 0.97';
-      if (el.matches('.st-donut path')) return '0.94';
-      if (el.matches('.row, .sm-row, .st-tip, .fp-row, .d-row, .mn-row')) return '0.98';
-      if (el.matches('.pbtn, .action')) return '0.96';
-      if (el.matches('.a-keys button, .a-ops button, .cv-keys button')) return '0.92';
-      if (el.matches('.cv-in, .cva-row, .set-row')) return '0.98';
-      return '0.93';
+      if (el.classList.contains('bcol')) return '0.5 0.94';
+      if (el.matches('.st-donut path')) return '0.9';
+      if (el.matches('.row, .sm-row, .st-tip, .fp-row, .d-row, .mn-row')) return '0.95';
+      if (el.matches('.pbtn, .action')) return '0.92';
+      if (el.matches('.a-keys button, .a-ops button, .cv-keys button')) return '0.86';
+      if (el.matches('.cv-in, .cva-row, .set-row')) return '0.95';
+      return '0.88';
     }
 
     function nowScale(t: HTMLElement): string {
@@ -45,7 +45,7 @@ export function usePressFeedback() {
       p.t = 0;
       p.at = performance.now();
       p.anim = p.tgt.animate([{ scale: nowScale(p.tgt) }, { scale: p.to }], {
-        duration: 160,
+        duration: 120,
         easing: EASE_IN,
         fill: 'forwards',
       });
@@ -99,7 +99,7 @@ export function usePressFeedback() {
         anim: null,
       });
 
-      p.t = setTimeout(() => down(p), 45);
+      p.t = setTimeout(() => down(p), 30);
       if (e.pointerType === 'mouse') {
         el.addEventListener('pointerleave', release, { once: true });
       }

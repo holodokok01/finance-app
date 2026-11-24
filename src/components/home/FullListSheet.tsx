@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Squircle, squirclePath } from '../ui/Squircle';
 import { TransactionRow } from './TransactionRow';
 import { useAppStore } from '../../store/useAppStore';
@@ -31,6 +32,9 @@ const CLOSE_PATH = 'M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.4
 const CHEV_PATH =
   'M15.835 11.63L9.205 5.2C8.79 4.799 8 5.042 8 5.57v12.86c0 .528.79.771 1.205.37l6.63-6.43a.5.5 0 0 0 0-.74';
 
+const FIRST_ROWS = 14;
+const CHUNK = 30;
+
 const lerp = (a: number, b: number, t: number) => Math.round(a + (b - a) * t);
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
@@ -44,7 +48,9 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
   const [shown, setShown] = useState(false);
   const [searching, setSearching] = useState(false);
   const [caretOff, setCaretOff] = useState(false);
-  const [f, setF] = useState<ListFilter>(EMPTY_FILTER);
+  const [f, setFState] = useState<ListFilter>(EMPTY_FILTER);
+  const [limit, setLimit] = useState(FIRST_ROWS);
+  const [fxOn, setFxOn] = useState(false);
 
   const sheetRef = useRef<HTMLDivElement>(null);
   const headARef = useRef<HTMLDivElement>(null);
@@ -52,6 +58,9 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const caretTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const growTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const totalRef = useRef(0);
+  const limitRef = useRef(FIRST_ROWS);
   const st = useRef({ open: false, busy: false });
   const closeFromRef = useRef<Rect | null>(null);
   const searchingRef = useRef(false);
@@ -62,8 +71,37 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
 
   const hp = useCallback((k: Parameters<typeof haptic>[0]) => haptic(k, hapticOn), [hapticOn]);
 
+  const setF = (next: ListFilter) => {
+    setFxOn(true);
+    setFState(next);
+  };
+
   const rows = useMemo(() => filterTx(transactions, f, categories), [transactions, f, categories]);
-  const groups = useMemo(() => groupByDay(rows), [rows]);
+  totalRef.current = rows.length;
+  limitRef.current = limit;
+  const visibleRows = useMemo(() => (limit >= rows.length ? rows : rows.slice(0, limit)), [rows, limit]);
+  const groups = useMemo(() => groupByDay(visibleRows), [visibleRows]);
+
+  /* Во время анимации в шите живут только первые строки, остальные добавляются порциями. */
+  const stopGrow = () => {
+    if (growTimer.current) clearTimeout(growTimer.current);
+    growTimer.current = null;
+  };
+  const growRows = () => {
+    stopGrow();
+    const tick = () => {
+      if (!st.current.open) return;
+      setLimit(l => (l >= totalRef.current ? l : l + CHUNK));
+      growTimer.current = setTimeout(() => {
+        if (limitRef.current < totalRef.current) tick();
+      }, 40);
+    };
+    tick();
+  };
+  const shrinkRows = () => {
+    stopGrow();
+    flushSync(() => setLimit(FIRST_ROWS));
+  };
 
   /* ---------- geometry ---------- */
   const viewRect = (): Rect => {
@@ -105,6 +143,7 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
   const animateSheet = (from: Rect, to: Rect, ms: number, done?: () => void) => {
     const start = performance.now();
     st.current.busy = true;
+    if (sheetRef.current) sheetRef.current.style.willChange = 'left, top, width, height, clip-path';
     const frame = (now: number) => {
       const t = Math.min(1, (now - start) / ms);
       const e = 1 - Math.pow(1 - t, 3);
@@ -120,6 +159,7 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
       if (t < 1) requestAnimationFrame(frame);
       else {
         st.current.busy = false;
+        if (sheetRef.current) sheetRef.current.style.willChange = '';
         if (done) done();
       }
     };
@@ -136,7 +176,7 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
     if (card) card.style.visibility = 'hidden';
     st.current.open = true;
     hp('light');
-    animateSheet(from, viewRect(), 460);
+    animateSheet(from, viewRect(), 460, () => growRows());
   };
 
   const closeSheet = (fromQ?: Rect | null) => {
@@ -146,14 +186,25 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
       return;
     }
     if (searchingRef.current) exitSearchRef.current();
+    if (scrollRef.current && scrollRef.current.scrollTop > 0) scrollRef.current.scrollTop = 0;
+    // сначала убираем лишние строки, потом анимируем: так сворачивание идёт без рывков
+    stopGrow();
+    setLimit(FIRST_ROWS);
+    st.current.busy = true;
     const to = cardRect();
     hp('light');
-    animateSheet(fromQ || viewRect(), to, fromQ ? 280 : 400, () => {
-      setShown(false);
-      const card = cardEl();
-      if (card) card.style.visibility = '';
-      st.current.open = false;
-    });
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        st.current.busy = false;
+        animateSheet(fromQ || viewRect(), to, fromQ ? 280 : 400, () => {
+          setShown(false);
+          setFxOn(false);
+          const card = cardEl();
+          if (card) card.style.visibility = '';
+          st.current.open = false;
+        });
+      })
+    );
   };
 
   useEffect(() => {
@@ -164,6 +215,8 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  useEffect(() => () => stopGrow(), []);
 
   // keep the full-screen sheet fitted to the viewport
   useEffect(() => {
@@ -244,6 +297,7 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
         }
         if (dy < 8) return;
         dragging = true;
+        shrinkRows();
         if (document.activeElement && (document.activeElement as HTMLElement).blur) {
           (document.activeElement as HTMLElement).blur();
         }
@@ -271,7 +325,7 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
         closeFromRef.current = q;
         onCloseRef.current();
       } else {
-        animateSheet(q, viewRect(), 260);
+        animateSheet(q, viewRect(), 260, () => growRows());
       }
     };
     sc.addEventListener('touchstart', onStart, { passive: true });
@@ -382,7 +436,7 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
         </div>
       </div>
       <div className="sheet-scroll" id="sheet-scroll" ref={scrollRef}>
-        <div className="list fx" id="sheet-list" key={JSON.stringify(f) + ':' + rows.length}>
+        <div className={`list${fxOn ? ' fx' : ''}`} id="sheet-list" key={JSON.stringify(f) + ':' + rows.length}>
           {rows.length === 0 ? (
             <div className="empty" style={{ minHeight: emptyH }}>
               <Squircle r={32} className="empty-tile">

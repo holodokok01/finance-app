@@ -10,7 +10,7 @@ interface TransactionRowProps {
   onClick?: (tx: Transaction) => void;
 }
 
-export const TransactionRow: React.FC<TransactionRowProps> = ({ tx, onClick }) => {
+const TransactionRowBase: React.FC<TransactionRowProps> = ({ tx, onClick }) => {
   const categories = useAppStore(s => s.categories);
   const base = useSettingsStore(s => s.base);
   const sym = symOf(base);
@@ -41,3 +41,6 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({ tx, onClick }) =
     </div>
   );
 };
+
+// onClick is a thin setter in every caller, so re-render only when the transaction itself changes
+export const TransactionRow = React.memo(TransactionRowBase, (a, b) => a.tx === b.tx);
