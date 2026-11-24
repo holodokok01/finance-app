@@ -574,13 +574,26 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @keyframes fx-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(6px); } }
 @keyframes foot-out { from { transform: none; } to { transform: translateY(100%); } }
 .fx-out { animation: fx-out .18s ease forwards; pointer-events: none; }
-.cal-footer.foot-out { animation: foot-out .2s ease forwards; pointer-events: none; }
-.hb-main, .hb-search { transition: opacity .26s ease, transform .32s cubic-bezier(.2, .8, .2, 1) !important; will-change: opacity, transform; }
-.hb-search { transform: translateX(24px); }
+.cal-footer.foot-out { animation: foot-out .32s cubic-bezier(.32, .72, 0, 1) forwards; pointer-events: none; }
+/* Поиск, вариант A: поле вырастает из лупы, кнопки всплывают. Одна кривая на всё. */
+.sheet { --ease: cubic-bezier(.32, .72, 0, 1); }
+.hb-main { transition: opacity .2s ease !important; }
+.hb-search { opacity: 1 !important; transform: none !important; transition: none !important; }
+.hb-search > * { transition: opacity .24s ease, transform .42s var(--ease); will-change: opacity, transform; }
+.hb-search .rb { transition: opacity .24s ease, transform .42s var(--ease), background .2s ease, box-shadow .2s ease; }
+.field-wrap { flex: 1; min-width: 0; display: flex; clip-path: inset(0 0 0 calc(100% - 44px) round 22px); transform: translateX(52px); opacity: 0; transition: clip-path .42s var(--ease), transform .42s var(--ease), opacity .12s ease .3s !important; }
+.field-wrap .field { flex: 1; }
+.field-wrap .field > * { opacity: 0; transition: opacity .2s ease; }
+#btn-filter, #btn-date { opacity: 0; transform: scale(.5); }
+#exit-search { opacity: 0; transform: scale(.6); }
+.sheet.searching .field-wrap { clip-path: inset(0 0 0 0 round 22px); transform: none; opacity: 1; transition: clip-path .42s var(--ease), transform .42s var(--ease), opacity .08s ease !important; }
+.sheet.searching .field-wrap .field > * { opacity: 1; transition-delay: .08s; }
+.sheet.searching #btn-filter, .sheet.searching #btn-date, .sheet.searching #exit-search { opacity: 1; transform: none; }
+.sheet.searching #btn-filter { transition-delay: .06s; }
+.sheet.searching #btn-date { transition-delay: .1s; }
 input { caret-color: var(--accent); }
 .sheet.caret-off #q { caret-color: transparent; }
-.sheet.searching .hb-main { transform: translateX(-24px); }
-.sheet.searching .hb-search { transform: none; }
+.sheet.searching .hb-main { transform: none; }
 .rb { transition: background .2s ease, box-shadow .2s ease; }
 .rb::after { content: ""; position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); transform: scale(0); opacity: 0; transition: transform .26s cubic-bezier(.3, 1.6, .5, 1), opacity .2s ease; pointer-events: none; }
 .rb.has::after { transform: scale(1); opacity: 1; }
@@ -594,9 +607,9 @@ input { caret-color: var(--accent); }
 @keyframes row-in { from { opacity: 0; transform: translateY(-12px) scale(.98); } to { opacity: 1; transform: none; } }
 @keyframes foot-in { from { transform: translateY(100%); } to { transform: none; } }
 .fx { animation: fx-in .24s ease both; }
-.fx-up { animation: fx-up .26s cubic-bezier(.2, .8, .2, 1) both; }
+.fx-up { animation: fx-up .42s cubic-bezier(.32, .72, 0, 1) both; }
 .row.row-in { animation: row-in .34s cubic-bezier(.2, .8, .2, 1) backwards; }
-.cal-footer.fx-foot { animation: foot-in .28s cubic-bezier(.2, .8, .2, 1) both; }
+.cal-footer.fx-foot { animation: foot-in .42s cubic-bezier(.32, .72, 0, 1) both; }
 .cal-day button { transition: background .18s ease, color .18s ease, box-shadow .18s ease; }
 .cal-day { transition: background .18s ease; }
 .a-amount, .a-avail { transition: color .2s ease; }

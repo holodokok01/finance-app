@@ -421,17 +421,25 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
     if (caretTimer.current) clearTimeout(caretTimer.current);
     caretTimer.current = setTimeout(() => setCaretOff(false), 340);
   };
-  /* Панели: список уходит, панель приходит (170 мс), как в эталоне */
+  /* Панели: новая появляется сразу, без паузы; нижние кнопки календаря уезжают вниз */
+  const footOut = () => {
+    if (panelTimer.current) clearTimeout(panelTimer.current);
+    if (viewRef.current === 'date') {
+      setLeaving(true);
+      panelTimer.current = setTimeout(() => setLeaving(false), 320);
+    } else setLeaving(false);
+  };
   const showPanel = (name: 'list' | 'filter' | 'date') => {
     if (name === viewRef.current) return;
-    if (panelTimer.current) clearTimeout(panelTimer.current);
-    setLeaving(true);
-    panelTimer.current = setTimeout(() => {
-      if (name === 'date') setDraft({ from: fRef.current.from, to: fRef.current.to, picking: false });
-      if (scrollRef.current) scrollRef.current.scrollTop = 0;
-      setView(name);
+    if (name !== 'date') footOut();
+    else {
+      if (panelTimer.current) clearTimeout(panelTimer.current);
       setLeaving(false);
-    }, 170);
+      setDraft({ from: fRef.current.from, to: fRef.current.to, picking: false });
+    }
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
+    viewRef.current = name;
+    setView(name);
   };
   const togglePanel = (name: 'filter' | 'date') => {
     showPanel(viewRef.current === name ? 'list' : name);
@@ -443,8 +451,8 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
     setCaretOff(true);
     inputRef.current?.blur();
     setF(EMPTY_FILTER);
-    if (panelTimer.current) clearTimeout(panelTimer.current);
-    setLeaving(false);
+    footOut();
+    viewRef.current = 'list';
     setView('list');
   };
   exitSearchRef.current = exitSearch;
@@ -516,6 +524,7 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
             >
               <svg viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: ICON_DATE }} />
             </button>
+            <div className="field-wrap">
             <Squircle as="label" r={99} className="field">
               <svg viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: ICON_SEARCH }} />
               <input
@@ -532,6 +541,7 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
                 }}
               />
             </Squircle>
+            </div>
             <button
               className="rb"
               type="button"
@@ -550,7 +560,7 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
         </div>
       </div>
       <div className="sheet-scroll" id="sheet-scroll" ref={scrollRef}>
-        <div className={leaving ? 'fx-out' : view === 'list' ? '' : 'fx-up'} key={view}>
+        <div className={view === 'list' ? 'fx' : 'fx-up'} key={view}>
           {view === 'filter' && (
             <ListFilterPanel
               f={f}
@@ -610,8 +620,8 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
           )}
         </div>
       </div>
-      {(view === 'date' || (leaving && viewRef.current === 'date')) && (
-        <div className={`cal-footer ${view === 'date' && !leaving ? 'fx-foot' : 'foot-out'}`} id="cal-footer" key="foot">
+      {(view === 'date' || leaving) && (
+        <div className={`cal-footer ${view === 'date' ? 'fx-foot' : 'foot-out'}`} id="cal-footer" key="foot">
           <button
             type="button"
             className="pbtn"
