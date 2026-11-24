@@ -39,7 +39,7 @@ export const ListDatePanel: React.FC<Props> = ({ draft, todayMidnight, lang, onP
 
   const now = new Date(todayMidnight);
   return (
-    <div id="panel-date">
+    <div id="panel-date" className="rng">
       <div className="fp-title">
         {L('Дата')}
         <span className="fp-sub">{label}</span>
@@ -66,6 +66,18 @@ export const ListDatePanel: React.FC<Props> = ({ draft, todayMidnight, lang, onP
               if (ts === draft.from) cls += ' st';
               if (ts === draft.to) cls += ' en';
             }
+          }
+          // скругление краёв полосы диапазона: в начале и конце недели и месяца
+          const col = (lead + d - 1) % 7;
+          const atStart = col === 0 || d === 1;
+          const atEnd = col === 6 || d === days;
+          if (cls.includes(' mid')) {
+            if (atStart) cls += ' rl';
+            if (atEnd) cls += ' rr';
+          } else if (cls.includes(' st')) {
+            if (atEnd) cls += ' nb'; // полоса некуда продолжать: только кружок
+          } else if (cls.includes(' en')) {
+            if (atStart) cls += ' nb';
           }
           cells.push(
             <div key={ts} className={cls}>
