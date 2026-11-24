@@ -6,6 +6,7 @@ import { initTelegramSdk } from './services/telegram';
 import { AppLayout } from './components/layout/AppLayout';
 import { HomeScreen } from './components/home/HomeScreen';
 import { AddTransactionSheet } from './components/home/AddTransactionSheet';
+import { TransactionDetailSheet } from './components/home/TransactionDetailSheet';
 import { Transaction } from './types/fin';
 
 export const App: React.FC = () => {
@@ -17,6 +18,7 @@ export const App: React.FC = () => {
   const [addOpen, setAddOpen] = useState(false);
   const [addType, setAddType] = useState<'expense' | 'income'>('expense');
   const [editTx, setEditTx] = useState<Transaction | null>(null);
+  const [detailId, setDetailId] = useState<number | null>(null);
 
   useEffect(() => {
     themeApply();
@@ -46,7 +48,10 @@ export const App: React.FC = () => {
   };
 
   const handleSelectTransaction = (tx: Transaction) => {
-    // When transaction is clicked, we can open edit for now
+    setDetailId(tx.id);
+  };
+
+  const handleEditFromDetail = (tx: Transaction) => {
     setAddType(tx.sum > 0 ? 'income' : 'expense');
     setEditTx(tx);
     setAddOpen(true);
@@ -60,6 +65,11 @@ export const App: React.FC = () => {
           onSelectTransaction={handleSelectTransaction}
         />
       </AppLayout>
+      <TransactionDetailSheet
+        txId={detailId}
+        onClose={() => setDetailId(null)}
+        onEdit={handleEditFromDetail}
+      />
       <AddTransactionSheet
         isOpen={addOpen}
         onClose={() => {
