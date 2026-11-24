@@ -39,7 +39,7 @@ export const PaymentEditorSheet: React.FC<PaymentEditorSheetProps> = ({ target, 
 
   const open = target !== null;
   const hp = useCallback((k: Parameters<typeof haptic>[0]) => haptic(k, hapticOn), [hapticOn]);
-  const { rendered, show, height } = useSheetPresence(open, () => hp('light'));
+  const { rendered, show, height, kb } = useSheetPresence(open, () => hp('light'));
 
   const expenseIds = categoryOrder.expense || [];
   const [editId, setEditId] = useState<string | null>(null);
@@ -169,7 +169,7 @@ export const PaymentEditorSheet: React.FC<PaymentEditorSheetProps> = ({ target, 
         className={`detail cs${show ? ' show' : ''}`}
         id="pe"
         aria-hidden={!show}
-        style={{ height: height ? height + 'px' : undefined }}
+        style={{ height: height ? height + 'px' : undefined, ['--kb' as string]: kb + 'px' }}
       >
         <div className="detail-dim" id="pe-dim" onClick={close} />
         <Squircle r="32 32 0 0" className="detail-panel ce-panel" id="pe-panel" ref={panelRef as any}>

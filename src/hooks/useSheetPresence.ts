@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useKeyboardInset } from './useKeyboardInset';
 
 /**
  * Показ шита с анимацией: сначала монтируем, на следующем кадре добавляем .show,
@@ -8,7 +9,6 @@ import { useEffect, useState } from 'react';
 export function useSheetPresence(open: boolean, onShow?: () => void) {
   const [rendered, setRendered] = useState(open);
   const [show, setShow] = useState(false);
-  const [height, setHeight] = useState(0);
 
   useEffect(() => {
     if (open) {
@@ -31,14 +31,7 @@ export function useSheetPresence(open: boolean, onShow?: () => void) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  useEffect(() => {
-    if (!rendered) return;
-    const size = () =>
-      setHeight(Math.min(window.innerHeight, document.documentElement.clientHeight || 99999));
-    size();
-    window.addEventListener('resize', size);
-    return () => window.removeEventListener('resize', size);
-  }, [rendered]);
+  const { height, kb } = useKeyboardInset(rendered);
 
   // Страница под шитом не скроллится; счётчик, чтобы вложенные шиты не снимали блок друг у друга
   useEffect(() => {
@@ -55,5 +48,5 @@ export function useSheetPresence(open: boolean, onShow?: () => void) {
     };
   }, [open]);
 
-  return { rendered, show, height };
+  return { rendered, show, height, kb };
 }

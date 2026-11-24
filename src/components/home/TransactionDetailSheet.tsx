@@ -4,6 +4,7 @@ import { CategoryTile } from '../ui/CategoryTile';
 import { useAppStore } from '../../store/useAppStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { useToastStore, showUndo, toast } from '../../store/useToastStore';
+import { useKeyboardInset } from '../../hooks/useKeyboardInset';
 import { usePullToClose } from '../../hooks/usePullToClose';
 import { useHoldToDelete } from '../../hooks/useHoldToDelete';
 import { haptic } from '../../services/telegram';
@@ -61,7 +62,6 @@ export const TransactionDetailSheet: React.FC<TransactionDetailSheetProps> = ({ 
   const [view, setView] = useState<'main' | 'pick'>('main');
   const [fade, setFade] = useState(false);
   const [note, setNote] = useState('');
-  const [height, setHeight] = useState(0);
 
   const switchingRef = useRef(false);
   const heightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -116,21 +116,8 @@ export const TransactionDetailSheet: React.FC<TransactionDetailSheetProps> = ({ 
     return () => app.classList.remove('locked');
   }, [isOpen]);
 
-  // Высота шита следует реальной высоте viewport
-  useEffect(() => {
-    if (!rendered) return;
-    const size = () => {
-      const vv = window.visualViewport ? Math.round(window.visualViewport.height) : 99999;
-      setHeight(Math.min(window.innerHeight, document.documentElement.clientHeight || 99999, vv));
-    };
-    size();
-    window.addEventListener('resize', size);
-    window.visualViewport?.addEventListener('resize', size);
-    return () => {
-      window.removeEventListener('resize', size);
-      window.visualViewport?.removeEventListener('resize', size);
-    };
-  }, [rendered]);
+  // Высота шита полная, клавиатура поднимает панель через --kb
+  const { height, kb } = useKeyboardInset(rendered);
 
   // Операция удалена снаружи (например undo-цепочкой): закрываем
   useEffect(() => {
@@ -197,7 +184,7 @@ export const TransactionDetailSheet: React.FC<TransactionDetailSheetProps> = ({ 
       className={`detail ${show ? 'show' : ''}`}
       id="detail"
       aria-hidden={!show}
-      style={{ height: height ? height + 'px' : undefined }}
+      style={{ height: height ? height + 'px' : undefined, ['--kb' as string]: kb + 'px' }}
     >
       <div className="detail-dim" id="detail-dim" onClick={close} />
       <Squircle r="32 32 0 0" className="detail-panel" id="detail-panel" ref={panelRef as any}>
