@@ -32,6 +32,20 @@ export function formatCurrency(v: number, sym: string): string {
   return groupThousands(Math.floor(a / 100)) + (c ? ',' + ('0' + c).slice(-2) : '') + ' ' + sym;
 }
 
+export function formatBalanceParts(v: number, base: string): { sign: string; pre: string; whole: string; cents: string; post: string } {
+  const sym = symOf(base);
+  const total = Math.round(v * 100);
+  const abs = Math.abs(total);
+  const cents = ('0' + (abs % 100)).slice(-2);
+  return {
+    sign: total < 0 ? '−' : '',
+    pre: preSym(sym),
+    whole: groupThousands(Math.floor(abs / 100)),
+    cents: ',' + cents,
+    post: postSym(sym),
+  };
+}
+
 export function calcBalance(opening: number, txList: Transaction[]): number {
   let all = 0;
   for (let i = 0; i < txList.length; i++) {
