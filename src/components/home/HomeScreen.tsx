@@ -80,12 +80,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     }
     if (onAddClick) {
       onAddClick(act);
-    } else {
-      toast(
-        act === 'expense'
-          ? L('Добавление расхода будет на следующем шаге')
-          : L('Добавление дохода будет на следующем шаге')
-      );
     }
   };
 

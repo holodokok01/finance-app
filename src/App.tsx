@@ -53,11 +53,13 @@ export const App: React.FC = () => {
   };
 
   return (
-    <AppLayout>
-      <HomeScreen
-        onAddClick={handleOpenAdd}
-        onSelectTransaction={handleSelectTransaction}
-      />
+    <>
+      <AppLayout>
+        <HomeScreen
+          onAddClick={handleOpenAdd}
+          onSelectTransaction={handleSelectTransaction}
+        />
+      </AppLayout>
       <AddTransactionSheet
         isOpen={addOpen}
         onClose={() => {
@@ -67,6 +69,6 @@ export const App: React.FC = () => {
         initialType={addType}
         editTransaction={editTx}
       />
-    </AppLayout>
+    </>
   );
 };
