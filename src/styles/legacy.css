@@ -712,3 +712,12 @@ input { caret-color: var(--accent); }
 .pe-amt input:placeholder-shown { padding-left: 6px; }
 .pe-caret { position: absolute; left: 0; top: 0; width: 3px; height: 44px; border-radius: 2px; background: var(--accent); pointer-events: none; display: none; }
 .pe-amt.f .pe-caret { display: block; animation: ce-blink 1s steps(1) infinite; }
+
+/* Full list sheet (React): fixed full-screen box, motion via clip-path inset + transform */
+.sheet { --px: 0px; }
+.sheet .sheet-body { display: flex; flex-direction: column; height: 100%; min-height: 0; will-change: transform; }
+.sheet .sheet-top { margin: 0 calc(16px + var(--px)); }
+.sheet .sheet-scroll { padding-left: calc(16px + var(--px)); padding-right: calc(16px + var(--px)); }
+.sheet .day { content-visibility: auto; contain-intrinsic-size: auto 280px; }
+.sheet .day:first-child { content-visibility: visible; }
+

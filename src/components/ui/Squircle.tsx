@@ -82,6 +82,33 @@ export function parseRadii(val?: number | string): number[] {
   return parts.length === 4 ? parts : [parts[0], parts[0], parts[0], parts[0]];
 }
 
+/* ---------- shared observer and path cache ---------- */
+const PATHS = new Map<string, string>();
+function cachedPath(w: number, h: number, R: number[]): string {
+  const k = w + 'x' + h + '|' + R.join(',');
+  let v = PATHS.get(k);
+  if (!v) {
+    v = `path('${squirclePath(w, h, R, SMOOTHING)}')`;
+    if (PATHS.size > 2000) PATHS.clear();
+    PATHS.set(k, v);
+  }
+  return v;
+}
+
+const PAINTERS = new WeakMap<Element, (w: number, h: number) => void>();
+const sharedRO: ResizeObserver | null =
+  typeof ResizeObserver !== 'undefined'
+    ? new ResizeObserver(entries => {
+        for (const e of entries) {
+          const fn = PAINTERS.get(e.target);
+          if (!fn) continue;
+          const bs = e.borderBoxSize && e.borderBoxSize[0];
+          if (bs) fn(Math.round(bs.inlineSize), Math.round(bs.blockSize));
+          else fn((e.target as HTMLElement).offsetWidth, (e.target as HTMLElement).offsetHeight);
+        }
+      })
+    : null;
+
 export interface SquircleProps extends Omit<React.AllHTMLAttributes<HTMLElement>, 'as'> {
   r: number | string;
   as?: React.ElementType;
@@ -110,41 +137,32 @@ export const Squircle = React.forwardRef<HTMLElement, SquircleProps>(({
   useEffect(() => {
     const el = elRef.current;
     if (!el) return;
-
-    const paint = () => {
-      const w = el.offsetWidth;
-      const h = el.offsetHeight;
+    const R = parseRadii(r);
+    let last = '';
+    const paint = (w: number, h: number) => {
       if (!w || !h) return;
-      const R = parseRadii(r);
-      const Ri = R.map(x => Math.max(x - 1, 0));
-      el.style.setProperty('--sq', `path('${squirclePath(w, h, R, SMOOTHING)}')`);
-      el.style.setProperty('--sq-in', `path('${squirclePath(w - 2, h - 2, Ri, SMOOTHING)}')`);
+      const key = w + 'x' + h;
+      if (key === last) return;
+      last = key;
+      el.style.setProperty('--sq', cachedPath(w, h, R));
+      el.style.setProperty('--sq-in', cachedPath(w - 2, h - 2, R.map(x => Math.max(x - 1, 0))));
       el.classList.add('on');
     };
-
-    paint();
-
-    let ro: ResizeObserver | null = null;
-    if (typeof ResizeObserver !== 'undefined') {
-      ro = new ResizeObserver(() => paint());
-      try {
-        ro.observe(el, { box: 'border-box' });
-      } catch (e) {
-        ro.observe(el);
-      }
+    if (!sharedRO) {
+      // без ResizeObserver: один замер
+      paint(el.offsetWidth, el.offsetHeight);
+      return;
     }
-
-    if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(paint);
+    // Размер приходит из общего ResizeObserver уже после раскладки, без принудительного замера
+    PAINTERS.set(el, paint);
+    try {
+      sharedRO.observe(el, { box: 'border-box' });
+    } catch (e) {
+      sharedRO.observe(el);
     }
-
-    const t1 = setTimeout(paint, 100);
-    const t2 = setTimeout(paint, 500);
-
     return () => {
-      if (ro) ro.disconnect();
-      clearTimeout(t1);
-      clearTimeout(t2);
+      PAINTERS.delete(el);
+      sharedRO?.unobserve(el);
     };
   }, [r]);
 

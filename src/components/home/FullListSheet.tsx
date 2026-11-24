@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { flushSync } from 'react-dom';
-import { Squircle, squirclePath } from '../ui/Squircle';
+import { Squircle } from '../ui/Squircle';
 import { TransactionRow } from './TransactionRow';
 import { useAppStore } from '../../store/useAppStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
@@ -12,14 +11,11 @@ import { ICON_EMPTY, ICON_SEARCH } from '../../assets/listIcons';
 import { L } from '../../i18n';
 import { Transaction } from '../../types/fin';
 
-interface Rect {
+interface Box {
   x: number;
   y: number;
   w: number;
   h: number;
-  r: number;
-  safe: number;
-  p: number;
 }
 
 export interface FullListSheetProps {
@@ -33,9 +29,7 @@ const CHEV_PATH =
   'M15.835 11.63L9.205 5.2C8.79 4.799 8 5.042 8 5.57v12.86c0 .528.79.771 1.205.37l6.63-6.43a.5.5 0 0 0 0-.74';
 
 const FIRST_ROWS = 14;
-const CHUNK = 30;
 
-const lerp = (a: number, b: number, t: number) => Math.round(a + (b - a) * t);
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
 export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onSelectTransaction }) => {
@@ -58,11 +52,14 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const caretTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const growTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const totalRef = useRef(0);
-  const limitRef = useRef(FIRST_ROWS);
+  const bodyRef = useRef<HTMLDivElement>(null);
   const st = useRef({ open: false, busy: false });
-  const closeFromRef = useRef<Rect | null>(null);
+  const pRef = useRef(0);
+  const animToken = useRef(0);
+  const geo = useRef<{ v: Box; c: Box }>({ v: { x: 0, y: 0, w: 0, h: 0 }, c: { x: 0, y: 0, w: 0, h: 0 } });
+  const closeFastRef = useRef(false);
+  const rafPending = useRef(false);
+  const dragT = useRef(0);
   const searchingRef = useRef(false);
   const exitSearchRef = useRef<() => void>(() => {});
   const onCloseRef = useRef(onClose);
@@ -77,34 +74,14 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
   };
 
   const rows = useMemo(() => filterTx(transactions, f, categories), [transactions, f, categories]);
-  totalRef.current = rows.length;
-  limitRef.current = limit;
   const visibleRows = useMemo(() => (limit >= rows.length ? rows : rows.slice(0, limit)), [rows, limit]);
   const groups = useMemo(() => groupByDay(visibleRows), [visibleRows]);
 
-  /* Во время анимации в шите живут только первые строки, остальные добавляются порциями. */
-  const stopGrow = () => {
-    if (growTimer.current) clearTimeout(growTimer.current);
-    growTimer.current = null;
-  };
-  const growRows = () => {
-    stopGrow();
-    const tick = () => {
-      if (!st.current.open) return;
-      setLimit(l => (l >= totalRef.current ? l : l + CHUNK));
-      growTimer.current = setTimeout(() => {
-        if (limitRef.current < totalRef.current) tick();
-      }, 40);
-    };
-    tick();
-  };
-  const shrinkRows = () => {
-    stopGrow();
-    flushSync(() => setLimit(FIRST_ROWS));
-  };
-
-  /* ---------- geometry ---------- */
-  const viewRect = (): Rect => {
+  /* ---------- geometry ----------
+     Шит всегда стоит на весь экран. Движение: clip-path inset (окно карточки раскрывается)
+     и transform у содержимого (едет от места карточки наверх). Размер шита не меняется,
+     поэтому браузер не перекладывает его каждый кадр. */
+  const viewRect = (): Box => {
     const W = document.documentElement.clientWidth;
     const H = Math.min(
       window.innerHeight,
@@ -112,54 +89,64 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
       window.visualViewport ? Math.round(window.visualViewport.height) : 99999
     );
     const w = Math.min(480, W);
-    return { x: Math.round((W - w) / 2), y: 0, w, h: H, r: 0, safe: 0, p: 1 };
+    return { x: Math.round((W - w) / 2), y: 0, w, h: H };
   };
   const cardEl = () => document.getElementById('ops-card');
-  const cardRect = (): Rect => {
+  const cardRect = (): Box => {
     const el = cardEl();
     if (!el) return viewRect();
     const b = el.getBoundingClientRect();
-    return { x: Math.round(b.left), y: Math.round(b.top), w: Math.round(b.width), h: Math.round(b.height), r: 32, safe: 0, p: 0 };
+    return { x: Math.round(b.left), y: Math.round(b.top), w: Math.round(b.width), h: Math.round(b.height) };
   };
 
-  const drawSheet = (q: Rect) => {
+  const placeSheet = (v: Box) => {
     const sheet = sheetRef.current;
     if (!sheet) return;
-    sheet.style.left = q.x + 'px';
-    sheet.style.top = q.y + 'px';
-    sheet.style.width = q.w + 'px';
-    sheet.style.height = q.h + 'px';
-    sheet.style.clipPath = `path('${squirclePath(q.w, q.h, [q.r, q.r, q.r, q.r])}')`;
-    sheet.style.setProperty('--safe', q.safe + 'px');
-    sheet.style.setProperty('--lab', String(Math.round(q.p * 40)));
-    sheet.style.setProperty('--gap', Math.round(q.p * 8) + 'px');
-    if (headARef.current) headARef.current.style.opacity = String(clamp01(1 - q.p * 2.2));
+    sheet.style.left = v.x + 'px';
+    sheet.style.top = v.y + 'px';
+    sheet.style.width = v.w + 'px';
+    sheet.style.height = v.h + 'px';
+  };
+
+  /** p = 0: шит совпадает с карточкой, p = 1: на весь экран. */
+  const draw = (p: number) => {
+    const sheet = sheetRef.current;
+    const body = bodyRef.current;
+    if (!sheet || !body) return;
+    pRef.current = p;
+    const v = geo.current.v;
+    const c = geo.current.c;
+    const k = 1 - p;
+    const top = Math.round(Math.max(0, c.y - v.y) * k);
+    const left = Math.round(Math.max(0, c.x - v.x) * k);
+    const right = Math.round(Math.max(0, v.x + v.w - c.x - c.w) * k);
+    const bottom = Math.round(Math.max(0, v.y + v.h - c.y - c.h) * k);
+    const r = Math.round(32 * k);
+    sheet.style.clipPath = p >= 1 ? 'none' : `inset(${top}px ${right}px ${bottom}px ${left}px round ${r}px)`;
+    body.style.transform = `translate3d(0, ${Math.round((c.y - v.y) * k)}px, 0)`;
+    sheet.style.setProperty('--px', Math.round(Math.max(0, c.x - v.x) * k) + 'px');
+    sheet.style.setProperty('--lab', String(Math.round(p * 40)));
+    sheet.style.setProperty('--gap', Math.round(p * 8) + 'px');
+    if (headARef.current) headARef.current.style.opacity = String(clamp01(1 - p * 2.2));
     if (headBRef.current) {
-      headBRef.current.style.opacity = String(clamp01((q.p - 0.45) * 1.8));
-      headBRef.current.style.pointerEvents = q.p > 0.9 ? 'auto' : 'none';
+      headBRef.current.style.opacity = String(clamp01((p - 0.45) * 1.8));
+      headBRef.current.style.pointerEvents = p > 0.9 ? 'auto' : 'none';
     }
   };
 
-  const animateSheet = (from: Rect, to: Rect, ms: number, done?: () => void) => {
+  const animateTo = (to: number, ms: number, done?: () => void) => {
+    const from = pRef.current;
     const start = performance.now();
+    const token = ++animToken.current;
     st.current.busy = true;
-    if (sheetRef.current) sheetRef.current.style.willChange = 'left, top, width, height, clip-path';
     const frame = (now: number) => {
+      if (token !== animToken.current) return;
       const t = Math.min(1, (now - start) / ms);
       const e = 1 - Math.pow(1 - t, 3);
-      drawSheet({
-        x: lerp(from.x, to.x, e),
-        y: lerp(from.y, to.y, e),
-        w: lerp(from.w, to.w, e),
-        h: lerp(from.h, to.h, e),
-        r: lerp(from.r, to.r, e),
-        safe: lerp(from.safe, to.safe, e),
-        p: from.p + (to.p - from.p) * e,
-      });
+      draw(from + (to - from) * e);
       if (t < 1) requestAnimationFrame(frame);
       else {
         st.current.busy = false;
-        if (sheetRef.current) sheetRef.current.style.willChange = '';
         if (done) done();
       }
     };
@@ -167,61 +154,55 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
   };
 
   const openSheet = () => {
-    if (st.current.open || st.current.busy) return;
-    const from = cardRect();
+    if (st.current.open) return;
+    geo.current = { v: viewRect(), c: cardRect() };
+    placeSheet(geo.current.v);
     if (scrollRef.current) scrollRef.current.scrollTop = 0;
-    drawSheet(from);
+    draw(0);
     setShown(true);
     const card = cardEl();
     if (card) card.style.visibility = 'hidden';
     st.current.open = true;
     hp('light');
-    animateSheet(from, viewRect(), 460, () => growRows());
+    animateTo(1, 460, () => {
+      // остальные строки дорисовываем, когда движение уже закончилось
+      requestAnimationFrame(() => setLimit(Infinity));
+    });
   };
 
-  const closeSheet = (fromQ?: Rect | null) => {
+  const closeSheet = (fast: boolean) => {
     if (!st.current.open) return;
-    if (st.current.busy) {
-      setTimeout(() => closeSheet(fromQ), 50);
-      return;
-    }
     if (searchingRef.current) exitSearchRef.current();
     if (scrollRef.current && scrollRef.current.scrollTop > 0) scrollRef.current.scrollTop = 0;
-    // сначала убираем лишние строки, потом анимируем: так сворачивание идёт без рывков
-    stopGrow();
-    setLimit(FIRST_ROWS);
-    st.current.busy = true;
-    const to = cardRect();
+    geo.current = { v: viewRect(), c: cardRect() };
     hp('light');
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        st.current.busy = false;
-        animateSheet(fromQ || viewRect(), to, fromQ ? 280 : 400, () => {
-          setShown(false);
-          setFxOn(false);
-          const card = cardEl();
-          if (card) card.style.visibility = '';
-          st.current.open = false;
-        });
-      })
-    );
+    animateTo(0, fast ? 280 : 400, () => {
+      setShown(false);
+      setFxOn(false);
+      const card = cardEl();
+      if (card) card.style.visibility = '';
+      st.current.open = false;
+      // пока шит скрыт, возвращаем короткий список для следующего открытия
+      setTimeout(() => setLimit(FIRST_ROWS), 50);
+    });
   };
 
   useEffect(() => {
     if (open) openSheet();
     else {
-      closeSheet(closeFromRef.current);
-      closeFromRef.current = null;
+      closeSheet(closeFastRef.current);
+      closeFastRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  useEffect(() => () => stopGrow(), []);
-
   // keep the full-screen sheet fitted to the viewport
   useEffect(() => {
     const fit = () => {
-      if (st.current.open && !st.current.busy) drawSheet(viewRect());
+      if (!st.current.open || st.current.busy) return;
+      geo.current = { v: viewRect(), c: cardRect() };
+      placeSheet(geo.current.v);
+      draw(pRef.current);
     };
     window.addEventListener('resize', fit);
     window.visualViewport?.addEventListener('resize', fit);
@@ -263,21 +244,7 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
     let vel = 0;
     let dragging = false;
     let armed = false;
-    let dq: Rect | null = null;
 
-    const qAt = (t: number): Rect => {
-      const a = viewRect();
-      const b = cardRect();
-      return {
-        x: lerp(a.x, b.x, t),
-        y: lerp(a.y, b.y, t),
-        w: lerp(a.w, b.w, t),
-        h: lerp(a.h, b.h, t),
-        r: lerp(a.r, b.r, t),
-        safe: 0,
-        p: 1 - t,
-      };
-    };
     const onStart = (e: TouchEvent) => {
       if (!st.current.open || st.current.busy || e.touches.length !== 1) return;
       armed = sc.scrollTop <= 0;
@@ -297,7 +264,7 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
         }
         if (dy < 8) return;
         dragging = true;
-        shrinkRows();
+        geo.current = { v: viewRect(), c: cardRect() };
         if (document.activeElement && (document.activeElement as HTMLElement).blur) {
           (document.activeElement as HTMLElement).blur();
         }
@@ -307,8 +274,15 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
       vel = (y - lastY) / Math.max(1, now - lastT);
       lastY = y;
       lastT = now;
-      dq = qAt(Math.min(1, Math.max(0, dy / 360)));
-      drawSheet(dq);
+      const t = Math.min(1, Math.max(0, dy / 360));
+      if (!rafPending.current) {
+        rafPending.current = true;
+        requestAnimationFrame(() => {
+          rafPending.current = false;
+          if (dragging) draw(1 - dragT.current);
+        });
+      }
+      dragT.current = t;
     };
     const onEnd = () => {
       if (!dragging) {
@@ -317,15 +291,13 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
       }
       dragging = false;
       armed = false;
-      const q = dq;
-      if (!q) return;
-      const shownPart = 1 - q.p;
-      if (shownPart > 0.28 || vel > 0.6) {
+      draw(1 - dragT.current);
+      if (dragT.current > 0.28 || vel > 0.6) {
         hp('light');
-        closeFromRef.current = q;
+        closeFastRef.current = true;
         onCloseRef.current();
       } else {
-        animateSheet(q, viewRect(), 260, () => growRows());
+        animateTo(1, 260);
       }
     };
     sc.addEventListener('touchstart', onStart, { passive: true });
@@ -373,6 +345,7 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
       id="sheet"
       aria-hidden={!shown}
     >
+      <div className="sheet-body" ref={bodyRef}>
       <div className="sheet-safe" />
       <div className="sheet-top">
         <div className="card-head head-a" id="head-a" ref={headARef} aria-hidden="true">
@@ -463,6 +436,7 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
             ))
           )}
         </div>
+      </div>
       </div>
     </div>
   );

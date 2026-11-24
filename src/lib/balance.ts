@@ -1,6 +1,13 @@
 import { Transaction } from '../types/fin';
 
+const SYM_CACHE: Record<string, string> = {};
+
 export function symOf(c: string): string {
+  if (SYM_CACHE[c] !== undefined) return SYM_CACHE[c];
+  return (SYM_CACHE[c] = symOfRaw(c));
+}
+
+function symOfRaw(c: string): string {
   try {
     const parts = new Intl.NumberFormat('ru-RU', {
       style: 'currency',
