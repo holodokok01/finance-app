@@ -7,7 +7,9 @@ import { getTelegramWebApp, haptic } from '../../services/telegram';
 import { formatCurrency, symOf } from '../../lib/balance';
 import { EMPTY_FILTER, ListFilter, filterTx, groupByDay, hasFilter } from '../../lib/filters';
 import { dayLabel } from '../../lib/dayLabel';
-import { ICON_EMPTY, ICON_SEARCH } from '../../assets/listIcons';
+import { ICON_DATE, ICON_EMPTY, ICON_FILTER, ICON_SEARCH } from '../../assets/listIcons';
+import { ListFilterPanel } from './ListFilterPanel';
+import { DateDraft, ListDatePanel, pickDay } from './ListDatePanel';
 import { L } from '../../i18n';
 import { Transaction } from '../../types/fin';
 
@@ -38,6 +40,9 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
   const balance = useAppStore(s => s.balance());
   const base = useSettingsStore(s => s.base);
   const hapticOn = useSettingsStore(s => s.haptic);
+  const lang = useSettingsStore(s => s.lang) || 'ru';
+  const categoryOrder = useAppStore(s => s.categoryOrder);
+  const todayMidnight = useAppStore(s => s.todayMidnight);
 
   const [shown, setShown] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -45,12 +50,18 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
   const [f, setFState] = useState<ListFilter>(EMPTY_FILTER);
   const [limit, setLimit] = useState(FIRST_ROWS);
   const [fxOn, setFxOn] = useState(false);
+  const [view, setView] = useState<'list' | 'filter' | 'date'>('list');
+  const [leaving, setLeaving] = useState(false);
+  const [draft, setDraft] = useState<DateDraft>({ from: null, to: null, picking: false });
 
   const sheetRef = useRef<HTMLDivElement>(null);
   const headARef = useRef<HTMLDivElement>(null);
   const headBRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const panelTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const viewRef = useRef<'list' | 'filter' | 'date'>('list');
+  const fRef = useRef<ListFilter>(EMPTY_FILTER);
   const caretTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const st = useRef({ open: false, busy: false });
@@ -67,6 +78,7 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   searchingRef.current = searching;
+  viewRef.current = view;
 
   const hp = useCallback((k: Parameters<typeof haptic>[0]) => haptic(k, hapticOn), [hapticOn]);
 
@@ -75,6 +87,7 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
     setFState(next);
   };
 
+  fRef.current = f;
   const rows = useMemo(() => filterTx(transactions, f, categories), [transactions, f, categories]);
   const visibleRows = useMemo(() => (limit >= rows.length ? rows : rows.slice(0, limit)), [rows, limit]);
   const groups = useMemo(() => groupByDay(visibleRows), [visibleRows]);
@@ -400,11 +413,31 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
     if (caretTimer.current) clearTimeout(caretTimer.current);
     caretTimer.current = setTimeout(() => setCaretOff(false), 340);
   };
+  /* Панели: список уходит, панель приходит (170 мс), как в эталоне */
+  const showPanel = (name: 'list' | 'filter' | 'date') => {
+    if (name === viewRef.current) return;
+    if (panelTimer.current) clearTimeout(panelTimer.current);
+    setLeaving(true);
+    panelTimer.current = setTimeout(() => {
+      if (name === 'date') setDraft({ from: fRef.current.from, to: fRef.current.to, picking: false });
+      if (scrollRef.current) scrollRef.current.scrollTop = 0;
+      setView(name);
+      setLeaving(false);
+    }, 170);
+  };
+  const togglePanel = (name: 'filter' | 'date') => {
+    showPanel(viewRef.current === name ? 'list' : name);
+    hp('light');
+  };
+
   const exitSearch = () => {
     setSearching(false);
     setCaretOff(true);
     inputRef.current?.blur();
     setF(EMPTY_FILTER);
+    if (panelTimer.current) clearTimeout(panelTimer.current);
+    setLeaving(false);
+    setView('list');
   };
   exitSearchRef.current = exitSearch;
 
@@ -457,6 +490,24 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
             </button>
           </div>
           <div className="hb-search">
+            <button
+              className={`rb${view === 'filter' ? ' on' : ''}${f.type || f.cat ? ' has' : ''}`}
+              type="button"
+              id="btn-filter"
+              aria-label={L('Фильтр')}
+              onClick={() => togglePanel('filter')}
+            >
+              <svg viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: ICON_FILTER }} />
+            </button>
+            <button
+              className={`rb${view === 'date' ? ' on' : ''}${f.from !== null ? ' has' : ''}`}
+              type="button"
+              id="btn-date"
+              aria-label={L('Дата')}
+              onClick={() => togglePanel('date')}
+            >
+              <svg viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: ICON_DATE }} />
+            </button>
             <Squircle as="label" r={99} className="field">
               <svg viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: ICON_SEARCH }} />
               <input
@@ -467,7 +518,10 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
                 autoComplete="off"
                 enterKeyHint="search"
                 value={f.q}
-                onChange={e => setF({ ...f, q: e.target.value })}
+                onChange={e => {
+                  setF({ ...f, q: e.target.value });
+                  if (viewRef.current !== 'list') showPanel('list');
+                }}
               />
             </Squircle>
             <button
@@ -488,34 +542,93 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
         </div>
       </div>
       <div className="sheet-scroll" id="sheet-scroll" ref={scrollRef}>
-        <div className={`list${fxOn ? ' fx' : ''}`} id="sheet-list" key={JSON.stringify(f) + ':' + rows.length}>
-          {rows.length === 0 ? (
-            <div className="empty" style={{ minHeight: emptyH }}>
-              <Squircle r={32} className="empty-tile">
-                <svg viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: ICON_EMPTY }} />
-              </Squircle>
-              <div className="empty-title">{L('Ничего не найдено')}</div>
-              <div className="empty-text">
-                {L(hasF ? 'Попробуйте изменить запрос или фильтры' : 'Операции появятся здесь после добавления')}
+        <div className={leaving ? 'fx-out' : view === 'list' ? '' : 'fx-up'} key={view}>
+          {view === 'filter' && (
+            <ListFilterPanel
+              f={f}
+              categories={categories}
+              order={categoryOrder}
+              onType={t => {
+                hp('light');
+                setF({ ...f, type: f.type === t ? null : t });
+                showPanel('list');
+              }}
+              onCat={id => {
+                hp('light');
+                setF({ ...f, cat: f.cat === id ? null : id });
+                showPanel('list');
+              }}
+            />
+          )}
+          {view === 'date' && (
+            <ListDatePanel
+              draft={draft}
+              todayMidnight={todayMidnight}
+              lang={lang}
+              onPick={ts => {
+                hp('light');
+                setDraft(d => pickDay(d, ts));
+              }}
+            />
+          )}
+          {view === 'list' && (
+          <div className={`list${fxOn ? ' fx' : ''}`} id="sheet-list" key={JSON.stringify(f) + ':' + rows.length}>
+            {rows.length === 0 ? (
+              <div className="empty" style={{ minHeight: emptyH }}>
+                <Squircle r={32} className="empty-tile">
+                  <svg viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: ICON_EMPTY }} />
+                </Squircle>
+                <div className="empty-title">{L('Ничего не найдено')}</div>
+                <div className="empty-text">
+                  {L(hasF ? 'Попробуйте изменить запрос или фильтры' : 'Операции появятся здесь после добавления')}
+                </div>
+                {hasF && (
+                  <button type="button" className="pbtn" id="reset-filters" onClick={resetFilters}>
+                    {L('Сбросить фильтры')}
+                  </button>
+                )}
               </div>
-              {hasF && (
-                <button type="button" className="pbtn" id="reset-filters" onClick={resetFilters}>
-                  {L('Сбросить фильтры')}
-                </button>
-              )}
-            </div>
-          ) : (
-            groups.map(g => (
-              <div className="day" key={g.d}>
-                <div className="day-label">{dayLabel(g.d)}</div>
-                {g.rows.map(tx => (
-                  <TransactionRow key={tx.id} tx={tx} onClick={onSelectTransaction} />
-                ))}
-              </div>
-            ))
+            ) : (
+              groups.map(g => (
+                <div className="day" key={g.d}>
+                  <div className="day-label">{dayLabel(g.d)}</div>
+                  {g.rows.map(tx => (
+                    <TransactionRow key={tx.id} tx={tx} onClick={onSelectTransaction} />
+                  ))}
+                </div>
+              ))
+            )}
+          </div>
           )}
         </div>
       </div>
+      {(view === 'date' || (leaving && viewRef.current === 'date')) && (
+        <div className={`cal-footer ${view === 'date' && !leaving ? 'fx-foot' : 'foot-out'}`} id="cal-footer" key="foot">
+          <button
+            type="button"
+            className="pbtn"
+            id="cal-cancel"
+            onClick={() => {
+              hp('light');
+              showPanel('list');
+            }}
+          >
+            {L('Отмена')}
+          </button>
+          <button
+            type="button"
+            className="pbtn primary"
+            id="cal-apply"
+            onClick={() => {
+              hp('light');
+              setF({ ...f, from: draft.from, to: draft.to });
+              showPanel('list');
+            }}
+          >
+            {L('Применить')}
+          </button>
+        </div>
+      )}
       </div>
     </div>
   );
