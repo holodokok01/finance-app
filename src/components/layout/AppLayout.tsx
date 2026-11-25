@@ -68,7 +68,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onSelectTransact
           id="scr-convert"
           hidden={currentTab !== 'convert'}
         >
-          <ConverterScreen />
+          <ConverterScreen active={currentTab === 'convert'} />
         </div>
 
         <div
