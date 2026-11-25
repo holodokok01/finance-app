@@ -13,7 +13,7 @@ const EASE_OUT = 'cubic-bezier(.2, .8, .2, 1)';
 
 function Delta({ diff, inc, sym }: { diff: number; inc: boolean; sym: string }) {
   const v = Math.round(diff);
-  if (!v) return <span className="dl eq">= 0 {sym}</span>;
+  if (!v) return <span className="dl eq">0 {sym}</span>;
   return (
     <span className={'dl ' + (diff > 0 !== inc ? 'bad' : 'good')}>
       {(diff > 0 ? '↑ ' : '↓ ') + groupThousands(Math.abs(v)) + ' ' + sym}
