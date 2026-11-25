@@ -7,6 +7,7 @@ import { haptic } from '../../services/telegram';
 import { L } from '../../i18n';
 import { StatsScreen } from '../stats/StatsScreen';
 import { ConverterScreen } from '../converter/ConverterScreen';
+import { SettingsScreen } from '../settings/SettingsScreen';
 import { Transaction } from '../../types/fin';
 import { refreshTopColor } from '../../lib/topColor';
 import { BottomFade } from './BottomFade';
@@ -14,9 +15,10 @@ import { BottomFade } from './BottomFade';
 interface AppLayoutProps {
   children?: React.ReactNode;
   onSelectTransaction: (tx: Transaction) => void;
+  onOpenPayments: () => void;
 }
 
-export const AppLayout: React.FC<AppLayoutProps> = ({ children, onSelectTransaction }) => {
+export const AppLayout: React.FC<AppLayoutProps> = ({ children, onSelectTransaction, onOpenPayments }) => {
   usePressFeedback();
 
   const [currentTab, setCurrentTab] = useState<TabKey>('home');
@@ -76,9 +78,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onSelectTransact
           id="scr-settings"
           hidden={currentTab !== 'settings'}
         >
-          <div className="scr-head">
-            <h1 className="scr-title">{L('Настройки')}</h1>
-          </div>
+          <SettingsScreen onOpenPayments={onOpenPayments} />
         </div>
       </main>
 

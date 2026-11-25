@@ -18,6 +18,11 @@ export const App: React.FC = () => {
   const loadStorage = useAppStore(s => s.loadStorage);
   const cloudLoad = useAppStore(s => s.cloudLoad);
   const loadRates = useRatesStore(s => s.loadRates);
+  /* смена языка перерисовывает всё дерево: подписка на lang заставляет App обновиться */
+  const lang = useSettingsStore(s => s.lang);
+  useEffect(() => {
+    document.documentElement.lang = lang || 'ru';
+  }, [lang]);
 
   const [addOpen, setAddOpen] = useState(false);
   const [addType, setAddType] = useState<'expense' | 'income'>('expense');
@@ -73,7 +78,7 @@ export const App: React.FC = () => {
 
   return (
     <>
-      <AppLayout onSelectTransaction={handleSelectTransaction}>
+      <AppLayout onSelectTransaction={handleSelectTransaction} onOpenPayments={() => setPayOpen(true)}>
         <HomeScreen
           onAddClick={handleOpenAdd}
           onSelectTransaction={handleSelectTransaction}

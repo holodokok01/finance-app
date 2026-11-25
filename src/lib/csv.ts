@@ -127,3 +127,60 @@ export function catByName(
   }
   return null;
 }
+
+/** Импорт: свой CSV или любой с теми же колонками. Неизвестные категории и дубли пропускаются. */
+export function importCsv(
+  text: string,
+  ctx: {
+    transactions: Transaction[];
+    categories: Record<string, Category>;
+    base: string;
+    rates: Record<string, number>;
+    today: number;
+    i18nUk: Record<string, string>;
+    i18nEn: Record<string, string>;
+  }
+): { added: Transaction[]; skipped: number } {
+  const r2 = (v: number) => Math.round(v * 100) / 100;
+  const rows = parseCsv(text);
+  const seen: Record<string, 1> = {};
+  ctx.transactions.forEach(t => {
+    seen[t.ts + '|' + t.t + '|' + t.cat + '|' + r2(t.sum)] = 1;
+  });
+  let id = ctx.transactions.reduce((m, t) => Math.max(m, t.id), 0);
+  const added: Transaction[] = [];
+  let skipped = 0;
+
+  rows.forEach(r => {
+    const ts = dateTs(r[0]);
+    if (ts === null) return;
+    const cat = catByName(r[3], ctx.categories, ctx.i18nUk, ctx.i18nEn);
+    let amt = parseFloat(String(r[5] || '').replace(/[\s ]/g, '').replace(',', '.'));
+    if (!cat || !(amt > 0)) {
+      skipped++;
+      return;
+    }
+    const cur = String(r[6] || ctx.base).trim().toUpperCase();
+    if (cur !== ctx.base && ctx.rates[cur] && ctx.rates[ctx.base]) amt = (amt / ctx.rates[cur]) * ctx.rates[ctx.base];
+    const inc = /доход|дохід|income|\+/i.test(r[2] || '') || (!r[2] && ctx.categories[cat].type === 'income');
+    const sum = r2(inc ? amt : -amt);
+    const raw = String(r[1] || '').trim();
+    const tm = /^\d{1,2}:\d{2}$/.test(raw) ? ('0' + raw).slice(-5) : '12:00';
+    const key = ts + '|' + tm + '|' + cat + '|' + sum;
+    if (seen[key]) {
+      skipped++;
+      return;
+    }
+    seen[key] = 1;
+    added.push({
+      id: ++id,
+      d: Math.round((ctx.today - ts) / 86400000),
+      t: tm,
+      cat,
+      note: String(r[4] || '').trim().slice(0, 140),
+      sum,
+      ts,
+    });
+  });
+  return { added, skipped };
+}

@@ -21,9 +21,11 @@ interface Props {
   codes: string[];
   selected: string[];
   onToggle: (code: string) => void;
+  /** заголовок шита; по умолчанию «Добавить валюту» */
+  title?: string;
 }
 
-export const AddCurrencySheet: React.FC<Props> = ({ open, onClose, codes, selected, onToggle }) => {
+export const AddCurrencySheet: React.FC<Props> = ({ open, onClose, codes, selected, onToggle, title }) => {
   const hapticOn = useSettingsStore(s => s.haptic);
   const lang = (useSettingsStore(s => s.lang) || 'ru') as LangCode;
   const hp = useCallback((k: Parameters<typeof haptic>[0]) => haptic(k, hapticOn), [hapticOn]);
@@ -87,7 +89,7 @@ export const AddCurrencySheet: React.FC<Props> = ({ open, onClose, codes, select
           <div className="d-grab" />
           <div className="d-top">
             <span className="d-spacer" />
-            <div className="d-top-title">{L('Добавить валюту')}</div>
+            <div className="d-top-title">{L(title || 'Добавить валюту')}</div>
             <button
               className="rb"
               type="button"
