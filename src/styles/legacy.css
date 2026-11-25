@@ -130,7 +130,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .dp-panel .cal-day button { width: 44px; height: 44px; }
 
 /* Add operation sheet */
-.detail-panel.add-panel { bottom: var(--kb, 0px); transition: transform .34s cubic-bezier(.2, .8, .2, 1), height .25s ease, bottom .25s ease; height: calc(100% - 24px); max-height: 800px; display: flex; flex-direction: column; overflow: hidden; padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+.detail-panel.add-panel { bottom: var(--kb, 0px); transition: transform .34s cubic-bezier(.2, .8, .2, 1); height: calc(100% - 24px); max-height: 800px; display: flex; flex-direction: column; overflow: hidden; padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
 .a-top { display: flex; align-items: center; justify-content: space-between; min-height: 44px; flex: none; }
 #a-edit-title[hidden] { display: none; }
 .seg[hidden] { display: none; }
@@ -744,4 +744,4 @@ input { caret-color: var(--accent); }
 .rng .cal-day.nb { background: none; }
 
 /* Слой модала меняет высоту при клавиатуре плавно, вместе с ней */
-.detail { transition: height .3s cubic-bezier(.2, .8, .2, 1); }
+.detail { transition: height .26s cubic-bezier(.25, .8, .25, 1); }

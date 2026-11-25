@@ -1,3 +1,4 @@
+import { useKeyboardInset } from '../../hooks/useKeyboardInset';
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { Squircle } from '../ui/Squircle';
 import { DatePickerModal } from '../ui/DatePickerModal';
@@ -109,7 +110,6 @@ export const AddTransactionSheet: React.FC<AddTransactionSheetProps> = ({
   const [animKey, setAnimKey] = useState<string | null>(null);
   const [rendered, setRendered] = useState(isOpen);
   const [showClass, setShowClass] = useState(false);
-  const [kbHeight, setKbHeight] = useState(0);
 
   const prevStrRef = useRef('');
   const wasOverRef = useRef(false);
@@ -175,32 +175,8 @@ export const AddTransactionSheet: React.FC<AddTransactionSheetProps> = ({
     }
   }, [isOpen, editTransaction, initialType, categoryOrder, todayMidnight]);
 
-  // Visual Viewport tracking for mobile keyboards
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleResize = () => {
-      if (window.visualViewport) {
-        const lh = Math.min(window.innerHeight, document.documentElement.clientHeight || 99999);
-        const shrink = Math.round(lh - window.visualViewport.height - window.visualViewport.offsetTop);
-        setKbHeight(shrink > 80 ? shrink : 0);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleResize);
-      window.visualViewport.addEventListener('scroll', handleResize);
-    }
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      if (window.visualViewport) {
-        window.visualViewport.removeEventListener('resize', handleResize);
-        window.visualViewport.removeEventListener('scroll', handleResize);
-      }
-    };
-  }, [isOpen]);
+  // Клавиатура: слой следует за окном Telegram, как у остальных модалов
+  const { height: layerH } = useKeyboardInset(isOpen);
 
   // Over budget shake & haptic error
   useEffect(() => {
@@ -403,7 +379,7 @@ export const AddTransactionSheet: React.FC<AddTransactionSheetProps> = ({
         className={`detail ${showClass ? 'show' : ''}`}
         id="add"
         aria-hidden={!isOpen}
-        style={{ height: '100%' }}
+        style={{ height: layerH ? layerH + 'px' : '100%' }}
       >
         <div className="detail-dim" id="add-dim" onClick={onClose} />
         <Squircle
@@ -411,9 +387,6 @@ export const AddTransactionSheet: React.FC<AddTransactionSheetProps> = ({
           className="detail-panel add-panel sq"
           id="add-panel"
           ref={panelRef as any}
-          style={{
-            ['--kb' as any]: `${kbHeight}px`,
-          }}
         >
           <div className="d-grab" />
           <div className="a-top">

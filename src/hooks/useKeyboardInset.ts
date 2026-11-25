@@ -105,6 +105,25 @@ export function useKeyboardInset(active: boolean): { height: number; kb: number;
       }
       later();
     };
+    // Ещё раньше фокуса: палец коснулся поля, начинаем подъём сразу (фокус и клавиатура придут на отпускании)
+    let armT: ReturnType<typeof setTimeout> | undefined;
+    const onTouchStart = (e: TouchEvent) => {
+      const t = e.target as HTMLElement | null;
+      const field = t && t.closest ? (t.closest('input, textarea') as HTMLElement | null) : null;
+      if (!field || !isTextField(field) || !inSheet(field) || focused) return;
+      focused = true;
+      setTgBg(true);
+      measure();
+      if (armT) clearTimeout(armT);
+      // палец ушёл в прокрутку и фокуса не было: возвращаем как было
+      armT = setTimeout(() => {
+        if (document.activeElement !== field) {
+          focused = false;
+          setTgBg(false);
+          measure();
+        }
+      }, 700);
+    };
     const onFocusOut = (e: FocusEvent) => {
       if (focused && !isTextField(e.relatedTarget)) {
         focused = false;
@@ -121,6 +140,7 @@ export function useKeyboardInset(active: boolean): { height: number; kb: number;
     window.addEventListener('scroll', unscroll, { passive: true });
     window.addEventListener('orientationchange', later);
     document.addEventListener('focusin', onFocusIn);
+    document.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
     document.addEventListener('focusout', onFocusOut);
     vv?.addEventListener('resize', measure);
     vv?.addEventListener('scroll', unscroll);
@@ -130,6 +150,8 @@ export function useKeyboardInset(active: boolean): { height: number; kb: number;
       window.removeEventListener('scroll', unscroll);
       window.removeEventListener('orientationchange', later);
       document.removeEventListener('focusin', onFocusIn);
+      document.removeEventListener('touchstart', onTouchStart, { capture: true } as EventListenerOptions);
+      if (armT) clearTimeout(armT);
       document.removeEventListener('focusout', onFocusOut);
       if (focused) setTgBg(false);
       vv?.removeEventListener('resize', measure);
