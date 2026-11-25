@@ -3,6 +3,8 @@ export interface TelegramWebApp {
   expand: () => void;
   disableVerticalSwipes?: () => void;
   lockOrientation?: () => void;
+  isFullscreen?: boolean;
+  exitFullscreen?: () => void;
   colorScheme?: 'light' | 'dark';
   themeParams?: Record<string, string>;
   setHeaderColor?: (color: string) => void;
@@ -44,6 +46,20 @@ export function isInsideTelegram(): boolean {
   return /tgWebApp/.test(window.location.hash + window.location.search) || !!(window as any).TelegramWebviewProxy;
 }
 
+// Telegram может открыть приложение в fullscreen (ярлык на домашнем экране).
+// Нам нужен обычный режим с шапкой Telegram, поэтому выходим из fullscreen.
+function keepWindowed(tg: TelegramWebApp): void {
+  const leave = () => {
+    try {
+      if (tg.isFullscreen && tg.exitFullscreen) tg.exitFullscreen();
+    } catch (e) {}
+  };
+  leave();
+  try {
+    tg.onEvent('fullscreenChanged', leave);
+  } catch (e) {}
+}
+
 export function initTelegramSdk(onReady?: (tg: TelegramWebApp) => void): void {
   if (typeof window === 'undefined') return;
 
@@ -54,6 +70,7 @@ export function initTelegramSdk(onReady?: (tg: TelegramWebApp) => void): void {
       try {
         existing.ready();
         existing.expand();
+        keepWindowed(existing);
         if (existing.disableVerticalSwipes) existing.disableVerticalSwipes();
         if (existing.lockOrientation) existing.lockOrientation();
       } catch (e) {}
@@ -70,6 +87,7 @@ export function initTelegramSdk(onReady?: (tg: TelegramWebApp) => void): void {
         try {
           tg.ready();
           tg.expand();
+          keepWindowed(tg);
           if (tg.disableVerticalSwipes) tg.disableVerticalSwipes();
           if (tg.lockOrientation) tg.lockOrientation();
         } catch (e) {}
