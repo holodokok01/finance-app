@@ -51,7 +51,7 @@ interface SummaryCardProps {
   bar: number | null;
   onPickBar: (from: number) => void;
   onSelectTransaction: (tx: Transaction) => void;
-  /** открыть операции за диапазон дней; пока нет шита операций, не передаётся */
+  /** открыть операции за диапазон дней */
   onOpenRange?: (from: number, to: number) => void;
 }
 
@@ -125,6 +125,72 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({
     delayTimer.current = window.setTimeout(() => is.forEach(i => (i.style.transitionDelay = '')), 800);
   }, [bars, n]);
 
+  /* водить пальцем по столбикам: горизонтальное движение выделяет столбик под пальцем, вертикальное скроллит страницу */
+  const scrub = useRef({ bars, cw, today, hapticOn, onPickBar, cur: -1, pad: 0 });
+  scrub.current.bars = bars;
+  scrub.current.cw = cw;
+  scrub.current.today = today;
+  scrub.current.hapticOn = hapticOn;
+  scrub.current.onPickBar = onPickBar;
+  scrub.current.pad = Math.floor((W - cw * n) / 2);
+  const scrubbedAt = useRef(0);
+  useEffect(() => {
+    const el = barsRef.current;
+    if (!el) return;
+    let x0 = 0;
+    let y0 = 0;
+    let mode: '' | '?' | 'x' | 'y' = '';
+    const pick = (x: number) => {
+      const s = scrub.current;
+      const r = el.getBoundingClientRect();
+      let i = Math.floor((x - r.left - s.pad) / s.cw);
+      i = Math.max(0, Math.min(s.bars.length - 1, i));
+      while (i > 0 && s.bars[i].from > s.today) i--;
+      if (i === s.cur) return;
+      s.cur = i;
+      s.onPickBar(s.bars[i].from);
+      haptic('select', s.hapticOn);
+    };
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length !== 1) {
+        mode = 'y';
+        return;
+      }
+      mode = '?';
+      x0 = e.touches[0].clientX;
+      y0 = e.touches[0].clientY;
+      scrub.current.cur = -1;
+    };
+    const onMove = (e: TouchEvent) => {
+      if (mode === 'y' || mode === '') return;
+      const t = e.touches[0];
+      if (mode === '?') {
+        const mx = t.clientX - x0;
+        const my = t.clientY - y0;
+        if (Math.abs(mx) < 6 && Math.abs(my) < 6) return;
+        mode = Math.abs(mx) > Math.abs(my) * 1.2 ? 'x' : 'y';
+        if (mode === 'y') return;
+      }
+      if (e.cancelable) e.preventDefault();
+      scrubbedAt.current = performance.now();
+      pick(t.clientX);
+    };
+    const onEnd = () => {
+      if (mode === 'x') scrubbedAt.current = performance.now();
+      mode = '';
+    };
+    el.addEventListener('touchstart', onStart, { passive: true });
+    el.addEventListener('touchmove', onMove, { passive: false });
+    el.addEventListener('touchend', onEnd);
+    el.addEventListener('touchcancel', onEnd);
+    return () => {
+      el.removeEventListener('touchstart', onStart);
+      el.removeEventListener('touchmove', onMove);
+      el.removeEventListener('touchend', onEnd);
+      el.removeEventListener('touchcancel', onEnd);
+    };
+  }, [n]);
+
   const label = hb ? (per === 'year' ? MONTH_L[lang][hb.mo as number] : dayShort(hb.from, today, lang)) : '';
   const isToday = hb && per !== 'year' && hb.from === today;
   const tipKey = hb
@@ -150,6 +216,7 @@ export const SummaryCard: React.FC<SummaryCardProps> = ({
             className={'bcol' + (i === hi ? ' hi' : '') + (b.from > today ? ' future' : '')}
             style={{ width: cw }}
             onClick={() => {
+              if (performance.now() - scrubbedAt.current < 350) return;
               onPickBar(b.from);
               haptic('select', hapticOn);
             }}

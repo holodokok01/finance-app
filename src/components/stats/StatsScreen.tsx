@@ -13,6 +13,7 @@ import { CatList } from './CatList';
 import { SummaryCard } from './SummaryCard';
 import { Transaction } from '../../types/fin';
 import { statData } from '../../lib/statsView';
+import { RangeSheet, RangeSpec } from './RangeSheet';
 import { periodRange, periodLabel } from '../../lib/stats';
 import { groupThousands, preSym, postSym, symOf } from '../../lib/balance';
 import { L } from '../../i18n';
@@ -73,6 +74,8 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ active, onSelectTransa
   const [sel, setSel] = useState<string | null>(null);
   /* выбранный тапом столбик «Сводки»; сбрасывается вместе с выбором категории */
   const [bar, setBar] = useState<number | null>(null);
+  /* шит операций: категория или диапазон дней */
+  const [spec, setSpec] = useState<RangeSpec | null>(null);
   const labelRef = useRef<HTMLDivElement>(null);
   const shownRef = useRef<number | null>(null);
 
@@ -339,7 +342,7 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ active, onSelectTransa
             </div>
           </div>
         </div>
-        <CatList d={d} sel={selCat ? selCat.cat : null} sym={sym} />
+        <CatList d={d} sel={selCat ? selCat.cat : null} sym={sym} onOpen={cat => setSpec({ kind: 'cat', cat })} />
       </Squircle>
       <SummaryCard
         d={d}
@@ -353,7 +356,9 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ active, onSelectTransa
         bar={bar}
         onPickBar={setBar}
         onSelectTransaction={onSelectTransaction}
+        onOpenRange={(from, to) => setSpec({ kind: 'range', from, to })}
       />
+      <RangeSheet spec={spec} d={d} today={today} onClose={() => setSpec(null)} onSelectTransaction={onSelectTransaction} />
     </>
   );
 };
