@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { cutRect, placeCard, isTourDone, markTourDone, TOUR_KEY, TOUR_STEPS } from '../../src/lib/tour';
+import { cutRect, unionBox, placeCard, isTourDone, markTourDone, TOUR_KEY, TOUR_STEPS } from '../../src/lib/tour';
 
 function stubStorage(initial: Record<string, string> = {}, broken = false) {
   const data: Record<string, string> = { ...initial };
@@ -24,6 +24,16 @@ describe('Тур: вырез', () => {
   });
 });
 
+describe('Тур: общая рамка', () => {
+  it('объединяет несколько элементов', () => {
+    const u = unionBox([
+      { left: 10, top: 20, width: 100, height: 80 },
+      { left: 130, top: 20, width: 90, height: 86 },
+    ]);
+    expect(u).toEqual({ left: 10, top: 20, width: 210, height: 86 });
+  });
+});
+
 describe('Тур: место карточки', () => {
   const vw = 390;
   const vh = 844;
@@ -44,10 +54,10 @@ describe('Тур: место карточки', () => {
   it('не выходит за края экрана, стрелка смотрит в центр выреза', () => {
     const p = placeCard({ x: 8, y: 100, w: 60, h: 40 }, vw, vh, 150);
     expect(p.left).toBe(16);
-    expect(p.arrowX).toBe(28);
+    expect(p.arrowX).toBe(36);
     const q = placeCard({ x: 330, y: 100, w: 56, h: 40 }, vw, vh, 150);
     expect(q.left + q.width).toBe(vw - 16);
-    expect(q.arrowX).toBe(q.width - 28);
+    expect(q.arrowX).toBe(q.width - 36);
     const m = placeCard({ x: 150, y: 100, w: 90, h: 40 }, vw, vh, 150);
     expect(m.arrowX).toBe(Math.round(195 - m.left));
   });

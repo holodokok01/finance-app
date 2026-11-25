@@ -13,6 +13,8 @@ export interface TourTarget {
   sel: string;
   /* радиус скругления самого элемента, к нему добавится отступ выреза */
   r: number;
+  /* true: подсветить сразу все найденные элементы одним общим вырезом */
+  all?: boolean;
 }
 
 export interface TourStep {
@@ -24,20 +26,29 @@ export interface TourStep {
   text: string;
   /* шаг показывается, только если этот элемент есть на Главной и не скрыт */
   needs?: string;
+  /* сколько мс ждать после смены вкладки, пока доедет анимация */
+  settle?: number;
 }
 
 export const TOUR_KEY = 'tour_v1';
 export const TOUR_EVENT = 'tour:start';
+/* зазор между элементом и синей линией */
 export const TOUR_PAD = 4;
+/* толщина синей линии, она лежит снаружи зазора */
+export const TOUR_RING = 2;
+/* от синей линии до карточки: стрелка 10 и 4 воздуха */
 export const TOUR_GAP = 14;
 export const TOUR_EDGE = 16;
-export const TOUR_ARROW = 14;
+export const TOUR_ARROW_W = 28;
+export const TOUR_ARROW_H = 10;
+/* стрелка не заходит на скруглённый угол карточки (радиус 20) */
+export const TOUR_ARROW_INSET = 36;
 
 export const TOUR_STEPS: TourStep[] = [
   {
     id: 'add',
     tab: 'home',
-    targets: [{ sel: '#scr-home .actions', r: 24 }],
+    targets: [{ sel: '#scr-home .action:not(.disabled)', r: 30, all: true }],
     title: 'Добавь операцию',
     text: 'Нажми «Расход» или «Доход» и впиши сумму.',
   },
@@ -62,7 +73,8 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'stats',
     tab: 'stats',
-    targets: [{ sel: '.tabbar [data-tab="stats"]', r: 28 }],
+    targets: [{ sel: '#tb-lens', r: 28 }],
+    settle: 550,
     title: 'Статистика',
     text: 'Здесь видно, куда уходят деньги.',
   },
@@ -96,8 +108,30 @@ export function startTour(): void {
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
+export interface Box {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/* Общая рамка нескольких элементов */
+export function unionBox(boxes: Box[]): Box {
+  let l = Infinity;
+  let t = Infinity;
+  let r = -Infinity;
+  let b = -Infinity;
+  for (const x of boxes) {
+    l = Math.min(l, x.left);
+    t = Math.min(t, x.top);
+    r = Math.max(r, x.left + x.width);
+    b = Math.max(b, x.top + x.height);
+  }
+  return { left: l, top: t, width: r - l, height: b - t };
+}
+
 /* Прямоугольник выреза: размер элемента плюс отступ, все числа целые */
-export function cutRect(el: { left: number; top: number; width: number; height: number }, pad = TOUR_PAD): Rect {
+export function cutRect(el: Box, pad = TOUR_PAD): Rect {
   return {
     x: Math.round(el.left) - pad,
     y: Math.round(el.top) - pad,
@@ -123,6 +157,6 @@ export function placeCard(t: Rect, vw: number, vh: number, cardH: number): CardP
   const below = t.y + t.h + TOUR_GAP + cardH <= vh - TOUR_EDGE;
   let top = below ? t.y + t.h + TOUR_GAP : t.y - TOUR_GAP - cardH;
   if (top < TOUR_EDGE) top = TOUR_EDGE;
-  const arrowX = clamp(Math.round(cx - left), 28, width - 28);
+  const arrowX = clamp(Math.round(cx - left), TOUR_ARROW_INSET, width - TOUR_ARROW_INSET);
   return { left, top: Math.round(top), width, side: below ? 'below' : 'above', arrowX };
 }
