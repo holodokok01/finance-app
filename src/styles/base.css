@@ -20,6 +20,9 @@ html[data-theme="dark"] .panel .balance-amount .cents { color: rgba(255, 255, 25
 html[data-theme="dark"] .page { position: relative; }
 html[data-theme="dark"] .page::before { content: ""; position: absolute; left: 0; right: 0; top: -600px; height: 600px; background: #082b45; pointer-events: none; }
 
+/* Оттяжка вниз: сам контейнер .app рисует сверху полоску цвета начала градиента (контент в оттяжке обрезается, а фон контейнера виден) */
+html[data-theme="dark"] .app:has(.page.is-home) { background: linear-gradient(180deg, #082b45 0, #082b45 160px, var(--bg) 160px); }
+
 /* Градиент за верхним краем только на Главной: на остальных вкладках фон плоский */
 html .page:not(.is-home)::before { content: none; }
 
