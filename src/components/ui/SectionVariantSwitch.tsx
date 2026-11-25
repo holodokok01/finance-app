@@ -2,19 +2,23 @@ import React, { useEffect, useState } from 'react';
 import { getTelegramWebApp } from '../../services/telegram';
 import { useSettingsStore } from '../../store/useSettingsStore';
 
-// ВРЕМЕННО: переключатель вариантов фона секций на всю ширину. Удалить после выбора.
-type Variant = '1' | '3';
+// ВРЕМЕННО: переключатель вида верхнего блока Главной. Удалить после выбора.
+type Variant = 'grad' | 'round';
 
-const COLORS: Record<Variant, { bg: string; header: string }> = {
-  '1': { bg: '#000000', header: '#0f1012' },
-  '3': { bg: '#0b0b0d', header: '#151619' },
+const HEADER: Record<Variant, string> = {
+  grad: '#0a3556',
+  round: '#151619',
+};
+const LABEL: Record<Variant, string> = {
+  grad: 'Верх: градиент',
+  round: 'Верх: скруглённый',
 };
 
 function read(): Variant {
   try {
-    return localStorage.getItem('dbg_sec') === '3' ? '3' : '1';
+    return localStorage.getItem('dbg_top') === 'round' ? 'round' : 'grad';
   } catch (e) {
-    return '1';
+    return 'grad';
   }
 }
 
@@ -23,16 +27,16 @@ export const SectionVariantSwitch: React.FC = () => {
   const themeApply = useSettingsStore(s => s.themeApply);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-sec', v);
+    document.documentElement.setAttribute('data-top', v);
     try {
-      localStorage.setItem('dbg_sec', v);
+      localStorage.setItem('dbg_top', v);
     } catch (e) {}
     themeApply();
     const tg = getTelegramWebApp();
     if (tg && document.documentElement.getAttribute('data-theme') === 'dark') {
       try {
-        if (tg.setBackgroundColor) tg.setBackgroundColor(COLORS[v].bg);
-        if (tg.setHeaderColor) tg.setHeaderColor(COLORS[v].header);
+        if (tg.setBackgroundColor) tg.setBackgroundColor('#0b0b0d');
+        if (tg.setHeaderColor) tg.setHeaderColor(HEADER[v]);
       } catch (e) {}
     }
   }, [v]);
@@ -40,7 +44,7 @@ export const SectionVariantSwitch: React.FC = () => {
   return (
     <button
       type="button"
-      onClick={() => setV(v === '1' ? '3' : '1')}
+      onClick={() => setV(v === 'grad' ? 'round' : 'grad')}
       style={{
         position: 'fixed',
         right: 16,
@@ -56,7 +60,7 @@ export const SectionVariantSwitch: React.FC = () => {
         background: 'rgba(120,120,128,.56)',
       }}
     >
-      {'Фон: вариант ' + v}
+      {LABEL[v]}
     </button>
   );
 };

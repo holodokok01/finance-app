@@ -7,15 +7,11 @@
   flex-direction: column;
 }
 
-/* ВРЕМЕННО: секции Главной на всю ширину, варианты 1 и 3 (см. SectionVariantSwitch) */
-html[data-sec] .panel.sq,
-html[data-sec] .ops-card.sq,
-html[data-sec] .panel.sq::before,
-html[data-sec] .ops-card.sq::before {
-  border-radius: 0;
-  clip-path: none;
-}
-html[data-sec] .panel { margin-left: 0; margin-right: 0; }
-html[data-sec] .ops { padding-left: 0; padding-right: 0; }
-html[data-sec="3"][data-theme="dark"] body { background: #0b0b0d; }
-html[data-sec="3"][data-theme="dark"] .page { --bg: #0b0b0d; --panel: #151619; --raise: #1f2024; }
+/* ВРЕМЕННО: верхний блок Главной на всю ширину, варианты grad и round (см. SectionVariantSwitch).
+   Цвета варианта 3 для тёмной темы. Секции 2 и 3 остаются карточками. */
+html[data-top] .panel { margin: 0; padding-top: 32px; }
+html[data-top][data-theme="dark"] body { background: #0b0b0d; }
+html[data-top][data-theme="dark"] .page { --bg: #0b0b0d; --panel: #151619; --raise: #1f2024; }
+html[data-top="grad"][data-theme="dark"] .panel.sq { background: linear-gradient(180deg, #0a3556 0%, #0b0b0d 100%); }
+html[data-top="grad"][data-theme="dark"] .panel.sq::before { background: transparent; }
+html[data-top="grad"][data-theme="dark"] .panel .stat { --fill: rgba(255, 255, 255, .08); }

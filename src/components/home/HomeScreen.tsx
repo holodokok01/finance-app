@@ -84,7 +84,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   return (
     <>
-      <Squircle as="section" r={32} className="panel" aria-label={L('Баланс')}>
+      <Squircle as="section" r="0 0 32 32" className="panel" aria-label={L('Баланс')}>
         <div className="balance">
           <div className="balance-label">{L('Общий баланс')}</div>
           <h1 className="balance-amount" id="balance">
