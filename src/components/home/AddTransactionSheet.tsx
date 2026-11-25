@@ -18,6 +18,10 @@ export interface AddTransactionSheetProps {
   onClose: () => void;
   initialType?: 'expense' | 'income';
   editTransaction?: Transaction | null;
+  /** кнопка «+» в списке категорий: открыть редактор новой категории */
+  onNewCategory?: (type: 'expense' | 'income') => void;
+  /** только что созданная категория: выбираем её */
+  pickedCategory?: { k: string; n: number } | null;
 }
 
 interface Token {
@@ -88,6 +92,8 @@ export const AddTransactionSheet: React.FC<AddTransactionSheetProps> = ({
   onClose,
   initialType = 'expense',
   editTransaction = null,
+  onNewCategory,
+  pickedCategory = null,
 }) => {
   const rawLang = useSettingsStore(s => s.lang);
   const lang = rawLang || 'ru';
@@ -188,6 +194,11 @@ export const AddTransactionSheet: React.FC<AddTransactionSheetProps> = ({
     }
     wasOverRef.current = isOver;
   }, [isOver]);
+
+  useEffect(() => {
+    if (pickedCategory && isOpen) setACat(pickedCategory.k);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pickedCategory && pickedCategory.n]);
 
   // Auto scroll categories to selected
   useEffect(() => {
@@ -548,7 +559,7 @@ export const AddTransactionSheet: React.FC<AddTransactionSheetProps> = ({
               aria-label={L('Новая категория', undefined, lang)}
               onClick={() => {
                 haptic('light');
-                toast(L('Категории настраиваются в настройках', undefined, lang));
+                if (onNewCategory) onNewCategory(type);
               }}
             >
               <svg viewBox="0 0 24 24">

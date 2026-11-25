@@ -11,6 +11,7 @@ import { TransactionDetailSheet } from './components/home/TransactionDetailSheet
 import { PaymentsSheet } from './components/home/PaymentsSheet';
 import { PaymentEditorSheet } from './components/home/PaymentEditorSheet';
 import { CategoriesFlow } from './components/categories/CategoriesFlow';
+import { CategoryEditorSheet, EditTarget } from './components/categories/CategoryEditorSheet';
 import { Transaction, RecurringPayment } from './types/fin';
 import { startTopColor } from './lib/topColor';
 
@@ -32,6 +33,8 @@ export const App: React.FC = () => {
   const [listOpen, setListOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
   const [catsOpen, setCatsOpen] = useState(false);
+  const [newCat, setNewCat] = useState<EditTarget | null>(null);
+  const [pickedCat, setPickedCat] = useState<{ k: string; n: number } | null>(null);
   const [payEdit, setPayEdit] = useState<{ id: string | null } | null>(null);
 
   useEffect(() => {
@@ -110,6 +113,14 @@ export const App: React.FC = () => {
         }}
         initialType={addType}
         editTransaction={editTx}
+        onNewCategory={type => setNewCat({ k: null, type })}
+        pickedCategory={pickedCat}
+      />
+      <CategoryEditorSheet
+        target={newCat}
+        onClose={() => setNewCat(null)}
+        onDelete={() => {}}
+        onSaved={k => setPickedCat(p => ({ k, n: (p ? p.n : 0) + 1 }))}
       />
     </>
   );
