@@ -105,24 +105,32 @@ export function useKeyboardInset(active: boolean): { height: number; kb: number;
       }
       later();
     };
-    // Ещё раньше фокуса: палец коснулся поля, начинаем подъём сразу (фокус и клавиатура придут на отпускании)
+    // Подъём на отпускании пальца над полем: это раньше фокуса и клавиатуры, но поле уже не уедет
+    // из-под пальца (на касании оно уезжало, и iOS не ставил фокус)
     let armT: ReturnType<typeof setTimeout> | undefined;
+    let sx = 0;
+    let sy = 0;
     const onTouchStart = (e: TouchEvent) => {
+      sx = e.touches[0].clientX;
+      sy = e.touches[0].clientY;
+    };
+    const onTouchEnd = (e: TouchEvent) => {
       const t = e.target as HTMLElement | null;
       const field = t && t.closest ? (t.closest('input, textarea') as HTMLElement | null) : null;
       if (!field || !isTextField(field) || !inSheet(field) || focused) return;
+      const c = e.changedTouches[0];
+      if (!c || Math.abs(c.clientX - sx) > 10 || Math.abs(c.clientY - sy) > 10) return;
       focused = true;
       setTgBg(true);
       measure();
       if (armT) clearTimeout(armT);
-      // палец ушёл в прокрутку и фокуса не было: возвращаем как было
       armT = setTimeout(() => {
         if (document.activeElement !== field) {
           focused = false;
           setTgBg(false);
           measure();
         }
-      }, 700);
+      }, 500);
     };
     const onFocusOut = (e: FocusEvent) => {
       if (focused && !isTextField(e.relatedTarget)) {
@@ -141,6 +149,7 @@ export function useKeyboardInset(active: boolean): { height: number; kb: number;
     window.addEventListener('orientationchange', later);
     document.addEventListener('focusin', onFocusIn);
     document.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
+    document.addEventListener('touchend', onTouchEnd, { passive: true, capture: true });
     document.addEventListener('focusout', onFocusOut);
     vv?.addEventListener('resize', measure);
     vv?.addEventListener('scroll', unscroll);
@@ -151,6 +160,7 @@ export function useKeyboardInset(active: boolean): { height: number; kb: number;
       window.removeEventListener('orientationchange', later);
       document.removeEventListener('focusin', onFocusIn);
       document.removeEventListener('touchstart', onTouchStart, { capture: true } as EventListenerOptions);
+      document.removeEventListener('touchend', onTouchEnd, { capture: true } as EventListenerOptions);
       if (armT) clearTimeout(armT);
       document.removeEventListener('focusout', onFocusOut);
       if (focused) setTgBg(false);
