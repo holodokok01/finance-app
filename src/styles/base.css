@@ -19,3 +19,9 @@ html[data-theme="dark"] .panel .balance-amount .cents { color: rgba(255, 255, 25
 /* Оттяжка вниз на самом верху: за верхним краем продолжается цвет начала градиента, чтобы не было тёмного разрыва под шапкой Telegram */
 html[data-theme="dark"] .page { position: relative; }
 html[data-theme="dark"] .page::before { content: ""; position: absolute; left: 0; right: 0; top: -600px; height: 600px; background: #082b45; pointer-events: none; }
+
+/* Градиент за верхним краем только на Главной: на остальных вкладках фон плоский */
+html .page:not(.is-home)::before { content: none; }
+
+/* Статистика: кнопки периода получают целую ширину из StatsScreen */
+.st-ctl .st-per button { width: var(--per-w, 66px); }

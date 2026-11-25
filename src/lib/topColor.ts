@@ -27,7 +27,9 @@ function compute(): string {
   if (document.querySelector('.detail.show, .sheet.show')) return SHEET;
   const app = document.getElementById('app');
   const panel = document.querySelector('.panel') as HTMLElement | null;
-  const h = panel ? panel.offsetHeight * GRAD_END : 0;
+  // Главная скрыта (другая вкладка): шапка цвета фона
+  if (!panel || !panel.offsetHeight) return END;
+  const h = panel.offsetHeight * GRAD_END;
   const raw = app && h ? Math.max(0, Math.min(1, app.scrollTop / h)) : 0;
   return mix(START, END, Math.round(raw * STEPS) / STEPS);
 }
@@ -49,6 +51,11 @@ function apply(): void {
   try {
     tg.setHeaderColor(c);
   } catch (e) {}
+}
+
+/** Перекрасить шапку сразу, например после смены вкладки. */
+export function refreshTopColor(): void {
+  apply();
 }
 
 export function startTopColor(): void {

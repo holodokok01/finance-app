@@ -5,6 +5,8 @@ import { usePressFeedback } from '../../hooks/usePressFeedback';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { haptic } from '../../services/telegram';
 import { L } from '../../i18n';
+import { StatsScreen } from '../stats/StatsScreen';
+import { refreshTopColor } from '../../lib/topColor';
 
 interface AppLayoutProps {
   children?: React.ReactNode;
@@ -25,6 +27,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     haptic('select', hapticEnabled);
     const app = document.getElementById('app');
     if (app) app.scrollTop = 0;
+    requestAnimationFrame(refreshTopColor);
   };
 
   return (
@@ -39,7 +42,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         <span>{L('Поверните телефон вертикально')}</span>
       </div>
 
-      <main className="page">
+      <main className={'page' + (currentTab === 'home' ? ' is-home' : '')}>
         <div
           className={`screen ${currentTab === 'home' ? 'on' : ''}`}
           id="scr-home"
@@ -53,9 +56,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           id="scr-stats"
           hidden={currentTab !== 'stats'}
         >
-          <div className="scr-head">
-            <h1 className="scr-title">{L('Статистика')}</h1>
-          </div>
+          <StatsScreen active={currentTab === 'stats'} />
         </div>
 
         <div
