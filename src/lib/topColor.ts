@@ -71,6 +71,10 @@ export function startTopColor(): void {
       apply();
     });
   };
+  // Полоска цвета градиента за верхним краем (оттяжка вниз) включена только на самом верху
+  const top = () => app.classList.toggle('at-top', app.scrollTop <= 0);
+  top();
+  app.addEventListener('scroll', top, { passive: true });
   app.addEventListener('scroll', schedule, { passive: true });
   // Шиты открываются и закрываются сменой класса show
   new MutationObserver(schedule).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
