@@ -5,6 +5,7 @@ import { haptic } from '../../services/telegram';
 import { Squircle } from '../ui/Squircle';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import { CHECK } from '../../assets/icons';
+import { Donut, DonutCat } from './Donut';
 import { periodRange, periodLabel } from '../../lib/stats';
 import { groupThousands, preSym, postSym, symOf } from '../../lib/balance';
 import { L } from '../../i18n';
@@ -46,6 +47,7 @@ function paintEurFit(el: HTMLElement, v: number, sym: string): void {
 
 export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
   const transactions = useAppStore(s => s.transactions);
+  const categories = useAppStore(s => s.categories);
   const today = useAppStore(s => s.todayMidnight);
   const base = useSettingsStore(s => s.base);
   const lang = (useSettingsStore(s => s.lang) || 'ru') as LangCode;
@@ -56,6 +58,10 @@ export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
   const [per, setPer] = useState<Per>('month');
   const [k, setK] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [sel, setSel] = useState<string | null>(null);
+  const labelRef = useRef<HTMLDivElement>(null);
+  const shownRef = useRef<number | null>(null);
+  const tweenRef = useRef(0);
 
   const ctlRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -80,15 +86,26 @@ export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
   const data = useMemo(() => {
     const r = periodRange(per, k, today);
     const inc = type === 'income';
-    let total = 0;
-    let n = 0;
+    const by: Record<string, DonutCat> = {};
     for (const t of transactions) {
       if (t.sum > 0 !== inc || t.ts < r.from || t.ts > r.to) continue;
-      total += Math.abs(t.sum);
-      n++;
+      const b = by[t.cat] || (by[t.cat] = { cat: t.cat, sum: 0, color: categories[t.cat]?.color || '#8e8e93' });
+      b.sum = Math.round((b.sum + Math.abs(t.sum)) * 100) / 100;
     }
-    return { inc, n, total: Math.round(total * 100) / 100 };
-  }, [transactions, per, k, today, type]);
+    const cats = Object.keys(by)
+      .map(key => by[key])
+      .sort((a, b) => b.sum - a.sum);
+    let total = 0;
+    cats.forEach(c => (total += c.sum));
+    return { inc, cats, total: Math.round(total * 100) / 100 };
+  }, [transactions, categories, per, k, today, type]);
+
+  /* выбор сбрасывается, если категории больше нет в периоде */
+  const selCat = sel ? data.cats.find(c => c.cat === sel) || null : null;
+  useEffect(() => {
+    if (sel && !selCat) setSel(null);
+  }, [sel, selCat]);
+  const shown = selCat ? selCat.sum : data.total;
 
   /* кнопки периода получают целую ширину, заполняющую строку; полоса месяцев делится на 3 целых слота */
   useLayoutEffect(() => {
@@ -141,9 +158,26 @@ export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
     oc?.animate([{ scale: '1', color: mixGrey(1) }, { scale: '.88', color: mixGrey(0) }], cfg);
   }, [k, per]);
 
+  /* сумма в центре досчитывается до нового значения за 450 мс */
   useLayoutEffect(() => {
-    if (totalRef.current) paintEurFit(totalRef.current, data.total, sym);
-  }, [data.total, sym, active]);
+    const el = totalRef.current;
+    if (!el) return;
+    const from = shownRef.current;
+    shownRef.current = shown;
+    cancelAnimationFrame(tweenRef.current);
+    if (from === null || from === shown || !active) {
+      paintEurFit(el, shown, sym);
+      return;
+    }
+    const t0 = performance.now();
+    const step = (now: number) => {
+      const q = Math.min(1, (now - t0) / 450);
+      const e = 1 - Math.pow(1 - q, 3);
+      paintEurFit(el, Math.round((from + (shown - from) * e) * 100) / 100, sym);
+      if (q < 1) tweenRef.current = requestAnimationFrame(step);
+    };
+    step(t0);
+  }, [shown, sym, active]);
 
   const goPeriod = (dk: number) => {
     const nk = k + dk;
@@ -153,6 +187,7 @@ export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
     }
     haptic('select', hapticOn);
     dirRef.current = dk > 0 ? 'back' : 'fwd';
+    setSel(null);
     setK(nk);
   };
 
@@ -160,6 +195,7 @@ export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
     haptic('select', hapticOn);
     setMenuOpen(false);
     if (t === type) return;
+    setSel(null);
     setType(t);
     const el = typeTextRef.current;
     if (el) {
@@ -191,7 +227,28 @@ export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
     [lang]
   );
 
-  const label = data.n ? L(data.inc ? 'Все доходы' : 'Все расходы') : L(data.inc ? 'Нет доходов' : 'Нет расходов');
+  const label = selCat
+    ? categories[selCat.cat]?.name || selCat.cat
+    : data.cats.length
+      ? L(data.inc ? 'Все доходы' : 'Все расходы')
+      : L(data.inc ? 'Нет доходов' : 'Нет расходов');
+
+  /* подпись под суммой мягко проявляется при смене текста */
+  const lastLabel = useRef(label);
+  useLayoutEffect(() => {
+    if (lastLabel.current === label) return;
+    lastLabel.current = label;
+    const el = labelRef.current;
+    if (!el) return;
+    el.classList.remove('fx');
+    void el.offsetWidth;
+    el.classList.add('fx');
+  }, [label]);
+
+  const pick = (c: string | null) => {
+    haptic('select', hapticOn);
+    setSel(c);
+  };
 
   return (
     <>
@@ -243,6 +300,7 @@ export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
             options={perOptions}
             onChange={p => {
               dirRef.current = 'swap';
+              setSel(null);
               setPer(p);
               setK(0);
             }}
@@ -261,12 +319,10 @@ export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
           </div>
         </div>
         <div className="st-donut">
-          <svg id="st-svg" width="240" height="240" viewBox="0 0 240 240">
-            <circle className="st-track on" id="st-track" cx="120" cy="120" r="96" />
-          </svg>
+          <Donut cats={data.cats} total={data.total} sel={selCat ? selCat.cat : null} onPick={pick} />
           <div className="st-center">
             <div className="st-total" id="st-total" ref={totalRef} />
-            <div className="st-label" id="st-label">
+            <div className="st-label" id="st-label" ref={labelRef} style={selCat ? { color: selCat.color } : undefined}>
               {label}
             </div>
           </div>
