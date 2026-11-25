@@ -140,7 +140,8 @@ export const ConverterScreen: React.FC<Props> = ({ active }) => {
   };
 
   const onKey = (raw: string) => {
-    const ticked = raw.charAt(raw.length - 1) === '!';
+    const mark = raw.charAt(raw.length - 1);
+    const ticked = mark === '!' || mark === '~';
     const k = ticked ? raw.slice(0, -1) : raw;
     let s = str;
     let f = fresh;
@@ -170,17 +171,14 @@ export const ConverterScreen: React.FC<Props> = ({ active }) => {
       }
     }
     if (!ticked) hp('light');
+    else if (mark === '~') hp('select');
     setStr(s);
     setFresh(f);
     commit({ amount: parseFloat((s || '0').replace(',', '.')) || 0 });
   };
 
-  const onClear = () => {
-    setStr('');
-    setFresh(false);
-    commit({ amount: 0 });
-    hp('medium');
-  };
+  const onKeyRef = useRef(onKey);
+  onKeyRef.current = onKey;
 
   const typed = () => {
     const p = str.split(',');
@@ -621,7 +619,7 @@ export const ConverterScreen: React.FC<Props> = ({ active }) => {
           })}
         </div>
       </Squircle>
-      <CvPad open={padOpen} padRef={padRef} onKey={onKey} onTick={() => hp('light')} onClear={onClear} onClose={closePad} />
+      <CvPad open={padOpen} padRef={padRef} onKey={k => onKeyRef.current(k)} onTick={() => hp('light')} onClose={closePad} />
       <AddCurrencySheet open={addOpen} onClose={() => setAddOpen(false)} codes={codes} selected={list} onToggle={toggleCurrency} />
     </div>
   );

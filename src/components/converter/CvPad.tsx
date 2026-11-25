@@ -12,12 +12,17 @@ interface CvPadProps {
   padRef: React.RefObject<HTMLDivElement>;
   onKey: (k: string) => void;
   onTick: () => void;
-  onClear: () => void;
   onClose: () => void;
 }
 
-export const CvPad: React.FC<CvPadProps> = ({ open, padRef, onKey, onTick, onClear, onClose }) => {
-  const hold = useRef(0);
+export const CvPad: React.FC<CvPadProps> = ({ open, padRef, onKey, onTick, onClose }) => {
+  const t1 = useRef(0);
+  const t2 = useRef(0);
+  const stopRepeat = () => {
+    clearTimeout(t1.current);
+    clearInterval(t2.current);
+  };
+  useEffect(() => stopRepeat, []);
   const tick = useRef(false);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -83,13 +88,17 @@ export const CvPad: React.FC<CvPadProps> = ({ open, padRef, onKey, onTick, onCle
               type="button"
               data-k="del"
               aria-label={L('Стереть')}
-              onClick={() => onKey('del' + (tick.current ? '!' : ''))}
-              onPointerDown={() => {
-                hold.current = window.setTimeout(onClear, 500);
+              onPointerDown={e => {
+                /* как на добавлении операции: стирает сразу, при удержании стирает по символу каждые 90 мс */
+                onKey('del' + (e.pointerType === 'touch' ? '!' : ''));
+                stopRepeat();
+                t1.current = window.setTimeout(() => {
+                  t2.current = window.setInterval(() => onKey('del~'), 90);
+                }, 400);
               }}
-              onPointerUp={() => clearTimeout(hold.current)}
-              onPointerCancel={() => clearTimeout(hold.current)}
-              onPointerLeave={() => clearTimeout(hold.current)}
+              onPointerUp={stopRepeat}
+              onPointerCancel={stopRepeat}
+              onPointerLeave={stopRepeat}
               onContextMenu={e => e.preventDefault()}
             >
               <svg viewBox="0 0 24 24">
