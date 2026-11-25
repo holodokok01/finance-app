@@ -68,6 +68,12 @@ export const CatList: React.FC<CatListProps> = ({ d, sel, sym, onOpen }) => {
       snapRef.current = next;
       return;
     }
+    /* вкладка скрыта: все отступы нулевые, снимок положения был бы ложным и при показе строки «ехали» бы сверху вниз */
+    if (day.getClientRects().length === 0) {
+      snapRef.current = next;
+      dataRef.current = d;
+      return;
+    }
     const rows = Array.from(day.querySelectorAll<HTMLElement>('.st-row:not(.ghost)'));
     rows.forEach(r => {
       r.style.transition = 'none';
