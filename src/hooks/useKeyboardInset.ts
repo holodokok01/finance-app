@@ -1,76 +1,66 @@
 import { useEffect, useState } from 'react';
 
-let fullH = 0;
-
-const readFull = () => {
-  const h = Math.min(window.innerHeight, document.documentElement.clientHeight || 99999);
-  if (h > fullH) fullH = h;
-  return fullH;
+const inTelegram = () => {
+  const w = window as unknown as { Telegram?: { WebApp?: { platform?: string } } };
+  const p = w.Telegram && w.Telegram.WebApp && w.Telegram.WebApp.platform;
+  return !!p && p !== 'unknown';
 };
 
 /**
- * Высота шита всегда полная и не зависит от клавиатуры (иначе при открытии и закрытии
- * клавиатуры шит прыгает, а под ним остаётся незатемнённый кусок страницы).
- * Клавиатура учитывается отдельно: kb это высота, на которую панель шита поднимается над ней.
- * iOS не всегда присылает resize при закрытии клавиатуры, поэтому на focusout kb сбрасывается сразу
- * и проверяется ещё раз позже.
+ * Высота слоя шита.
+ * Замеры на iPhone в Telegram: при клавиатуре Telegram сам уменьшает окно приложения
+ * (innerHeight 800 → 453), а visualViewport догоняет позже. Поэтому в Telegram верим только
+ * innerHeight: шит просто становится ниже вместе с окном, без своих сдвигов.
+ * iOS при этом ещё и прокручивает страницу к полю (scrollY 362): пока открыт шит, сразу
+ * возвращаем прокрутку на 0, иначе весь слой уезжает вниз.
+ * В обычном браузере окно не меняется, там берём visualViewport.
  */
 export function useKeyboardInset(active: boolean): { height: number; kb: number; oy: number } {
-  const [state, setState] = useState({ height: 0, kb: 0, oy: 0 });
+  const [height, setHeight] = useState(0);
 
   useEffect(() => {
     if (!active) return;
     const vv = window.visualViewport;
+    const tg = inTelegram();
     const measure = () => {
-      const full = readFull();
-      let kb = 0;
-      let oy = 0;
-      if (vv) {
-        // iOS при фокусе сдвигает видимую область вниз (offsetTop), а fixed-слой остаётся на месте:
-        // как в эталоне, двигаем слой вслед за видимой областью и возвращаем прокрутку страницы
-        oy = Math.max(0, Math.round(vv.offsetTop));
-        const shrink = Math.round(full - vv.height);
-        kb = shrink > 80 ? shrink : 0;
-      }
-      if (oy > 0 || window.pageYOffset > 0) {
+      let h = Math.min(window.innerHeight, document.documentElement.clientHeight || 99999);
+      if (!tg && vv) h = Math.min(h, Math.round(vv.height));
+      setHeight(prev => (prev === h ? prev : h));
+    };
+    const unscroll = () => {
+      if (window.scrollY !== 0 || (vv && vv.offsetTop !== 0)) {
         try {
           window.scrollTo(0, 0);
         } catch (e) {
           /* ignore */
         }
       }
-      setState(s => (s.height === full && s.kb === kb && s.oy === oy ? s : { height: full, kb, oy }));
-    };
-    const onOrient = () => {
-      fullH = 0;
-      setTimeout(measure, 300);
     };
     let timers: ReturnType<typeof setTimeout>[] = [];
-    const onFocusOut = () => {
-      setState(s => (s.kb === 0 && s.oy === 0 ? s : { ...s, kb: 0, oy: 0 }));
-      try {
-        window.scrollTo(0, 0);
-      } catch (e) {
-        /* ignore */
-      }
+    const later = () => {
       timers.forEach(clearTimeout);
-      timers = [setTimeout(measure, 250), setTimeout(measure, 700)];
+      timers = [setTimeout(measure, 120), setTimeout(measure, 400), setTimeout(measure, 800)];
     };
     measure();
+    unscroll();
     window.addEventListener('resize', measure);
-    window.addEventListener('orientationchange', onOrient);
-    document.addEventListener('focusout', onFocusOut);
+    window.addEventListener('scroll', unscroll, { passive: true });
+    window.addEventListener('orientationchange', later);
+    document.addEventListener('focusin', later);
+    document.addEventListener('focusout', later);
     vv?.addEventListener('resize', measure);
-    vv?.addEventListener('scroll', measure);
+    vv?.addEventListener('scroll', unscroll);
     return () => {
       timers.forEach(clearTimeout);
       window.removeEventListener('resize', measure);
-      window.removeEventListener('orientationchange', onOrient);
-      document.removeEventListener('focusout', onFocusOut);
+      window.removeEventListener('scroll', unscroll);
+      window.removeEventListener('orientationchange', later);
+      document.removeEventListener('focusin', later);
+      document.removeEventListener('focusout', later);
       vv?.removeEventListener('resize', measure);
-      vv?.removeEventListener('scroll', measure);
+      vv?.removeEventListener('scroll', unscroll);
     };
   }, [active]);
 
-  return state;
+  return { height, kb: 0, oy: 0 };
 }
