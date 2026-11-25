@@ -28,8 +28,6 @@ export interface TourStep {
   text: string;
   /* шаг показывается, только если этот элемент есть на Главной и не скрыт */
   needs?: string;
-  /* сколько мс ждать после смены вкладки, пока доедет анимация */
-  settle?: number;
 }
 
 export const TOUR_KEY = 'tour_v1';
@@ -75,8 +73,8 @@ export const TOUR_STEPS: TourStep[] = [
   {
     id: 'stats',
     tab: 'stats',
-    targets: [{ sel: '#tb-lens', r: 28 }],
-    settle: 550,
+    /* кнопка вкладки совпадает по размеру со стеклянной плашкой, а видна на любом экране */
+    targets: [{ sel: '.tabbar [data-tab="stats"]', r: 28 }],
     title: 'Статистика',
     text: 'Здесь видно, куда уходят деньги.',
   },

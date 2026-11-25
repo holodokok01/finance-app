@@ -198,15 +198,26 @@ export const Tour: React.FC<Props> = ({ goTab }) => {
     targetRef.current = null;
     setReady(false);
     (async () => {
-      goTabRef.current(step.tab);
-      await frames(2);
-      if (step.settle) await wait(step.settle);
-      if (run !== runRef.current) return;
-      let found = findTarget(step);
-      for (let k = 0; !found && k < 5; k++) {
-        await wait(50);
+      /* цель в таб-баре видна на любом экране: рамка сразу едет к ней, пока страница меняется */
+      const pre = findTarget(step);
+      const early = !!pre && !!pre.els[0].closest('.tabbar');
+      const hadShape = !!shapeRef.current;
+      let found: Found | null = null;
+      if (early) {
+        found = pre;
+        targetRef.current = pre;
+        measure();
+        goTabRef.current(step.tab);
+      } else {
+        goTabRef.current(step.tab);
+        await frames(2);
         if (run !== runRef.current) return;
         found = findTarget(step);
+        for (let k = 0; !found && k < 5; k++) {
+          await wait(50);
+          if (run !== runRef.current) return;
+          found = findTarget(step);
+        }
       }
       if (run !== runRef.current) return;
       if (!found) {
@@ -216,6 +227,7 @@ export const Tour: React.FC<Props> = ({ goTab }) => {
         return;
       }
       targetRef.current = found;
+      let scrolled = false;
       const inBar = !!found.els[0].closest('.tabbar');
       if (!inBar) {
         const app = document.getElementById('app');
@@ -229,6 +241,7 @@ export const Tour: React.FC<Props> = ({ goTab }) => {
           const delta = s1 - s0;
           if (delta !== 0) {
             /* рамка сразу едет на место, где элемент окажется после прокрутки */
+            scrolled = true;
             scrollingRef.current = true;
             const next = cutRect({ ...box, top: box.top - delta }, found.pad);
             setCut(prev => (same(prev, next) ? prev : next));
@@ -240,7 +253,8 @@ export const Tour: React.FC<Props> = ({ goTab }) => {
         }
       }
       measure();
-      await wait(60);
+      /* карточка появляется, когда рамка доехала: без перекрытия в пути */
+      await wait(hadShape && !scrolled ? SCROLL_MS - 40 : 60);
       if (run !== runRef.current) return;
       setReady(true);
     })();
