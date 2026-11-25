@@ -415,6 +415,7 @@ export const FullListSheet: React.FC<FullListSheetProps> = ({ open, onClose, onS
 
   /* ---------- search ---------- */
   const enterSearch = () => {
+    hp('light');
     setSearching(true);
     setCaretOff(true);
     inputRef.current?.focus();
