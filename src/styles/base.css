@@ -8,23 +8,38 @@
 }
 
 /* Верхний блок Главной: градиент бренд-цвета сверху вниз, тёмная тема. Высота градиента (60%) должна совпадать с GRAD_END в lib/topColor.ts. */
-html[data-theme="dark"] .panel.sq { background: linear-gradient(180deg, #082b45 0%, #0b0b0d 60%); }
-html[data-theme="dark"] .panel.sq::before { background: transparent; }
-html[data-theme="dark"] .panel .stat { --fill: var(--panel); }
+html[data-theme="dark"] { --grad-start: #082b45; }
+html[data-theme="light"] { --grad-start: #c9e4f8; }
+html .panel.sq { background: linear-gradient(180deg, var(--grad-start) 0%, var(--bg) 60%); }
+html .panel.sq::before { background: transparent; }
+html .panel .stat { --fill: var(--panel); }
 /* --edge прозрачный, иначе полупрозрачная заливка рисуется дважды (фон и ::before) и выходит светлее */
 html[data-theme="dark"] .panel .action.disabled .action-pill { --edge: transparent; --fill: rgba(0, 0, 0, .24); }
 html[data-theme="dark"] .panel .balance-label { color: rgba(255, 255, 255, .64); }
 html[data-theme="dark"] .panel .balance-amount .cents { color: rgba(255, 255, 255, .48); }
 
 /* Оттяжка вниз на самом верху: за верхним краем продолжается цвет начала градиента, чтобы не было тёмного разрыва под шапкой Telegram */
-html[data-theme="dark"] .page { position: relative; }
-html[data-theme="dark"] .page::before { content: ""; position: absolute; left: 0; right: 0; top: -600px; height: 600px; background: #082b45; pointer-events: none; }
+html .page { position: relative; }
+html .page::before { content: ""; position: absolute; left: 0; right: 0; top: -600px; height: 600px; background: var(--grad-start); pointer-events: none; }
 
 /* Оттяжка вниз: сам контейнер .app рисует сверху полоску цвета начала градиента (контент в оттяжке обрезается, а фон контейнера виден) */
-html[data-theme="dark"] .app:has(.page.is-home) { background: linear-gradient(180deg, #082b45 0, #082b45 160px, var(--bg) 160px); }
+html .app:has(.page.is-home) { background: linear-gradient(180deg, var(--grad-start) 0, var(--grad-start) 160px, var(--bg) 160px); }
 
 /* Градиент за верхним краем только на Главной: на остальных вкладках фон плоский */
 html .page:not(.is-home)::before { content: none; }
 
 /* Статистика: кнопки периода получают целую ширину из StatsScreen */
 .st-ctl .st-per button { width: var(--per-w, 66px); }
+
+/* Светлая тема: кнопка-заглушка на градиенте полупрозрачная белая */
+html[data-theme="light"] .panel .action.disabled .action-pill { --edge: transparent; --fill: rgba(255, 255, 255, .6); }
+
+/* Затухание контента внизу экрана под таббаром (слой лежит под таббаром, сам таббар не менялся) */
+.bot-fade { position: fixed; left: 0; right: 0; bottom: 0; z-index: 14; pointer-events: none; height: calc(max(28px, env(safe-area-inset-bottom) + 4px) + 64px + 48px); }
+.bot-fade[data-v="1"] { background: linear-gradient(180deg, transparent, var(--bg) 85%); }
+.bot-fade[data-v="2"] { background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--bg) 92%, transparent) 85%); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); -webkit-mask-image: linear-gradient(180deg, transparent, #000 60%); mask-image: linear-gradient(180deg, transparent, #000 60%); }
+.bot-fade[data-v="3"] { height: calc(max(28px, env(safe-area-inset-bottom) + 4px) + 64px + 16px); background: linear-gradient(180deg, transparent, var(--bg) 70%); }
+.bot-fade[data-v="0"] { display: none; }
+.fade-sw { position: fixed; top: 64px; right: 8px; z-index: 30; display: flex; gap: 4px; padding: 4px; border-radius: 16px; background: var(--panel); box-shadow: 0 0 0 1px var(--line2); }
+.fade-sw button { min-width: 36px; height: 32px; padding: 0 8px; border-radius: 12px; font-size: 13px; line-height: 16px; color: var(--text-2); }
+.fade-sw button.on { background: var(--accent); color: #fff; }

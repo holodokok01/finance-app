@@ -8,6 +8,7 @@ import { L } from '../../i18n';
 import { StatsScreen } from '../stats/StatsScreen';
 import { Transaction } from '../../types/fin';
 import { refreshTopColor } from '../../lib/topColor';
+import { BottomFade } from './BottomFade';
 
 interface AppLayoutProps {
   children?: React.ReactNode;
@@ -87,6 +88,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onSelectTransact
         </div>
       </main>
 
+      <BottomFade />
       <TabBar currentTab={currentTab} onTabChange={handleTabChange} />
       <Toast />
     </div>

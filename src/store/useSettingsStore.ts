@@ -72,7 +72,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const tg = getTelegramWebApp();
       if (tg) {
         try {
-          if (tg.setHeaderColor) tg.setHeaderColor(eff === 'light' ? '#ffffff' : topHeaderColor());
+          if (tg.setHeaderColor) tg.setHeaderColor(topHeaderColor());
           if (tg.setBackgroundColor) tg.setBackgroundColor(color);
         } catch (e) {}
       }

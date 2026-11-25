@@ -1,10 +1,12 @@
 import { getTelegramWebApp } from '../services/telegram';
 
-// Цвет шапки Telegram следует за градиентом верхнего блока при прокрутке (тёмная тема).
-const START = '#082b45';
-const END = '#0b0b0d';
-// Когда открыт шит или модал, под шапкой нет градиента, шапка серая как сам шит.
-const SHEET = '#151619';
+// Цвет шапки Telegram следует за градиентом верхнего блока при прокрутке. Цвета должны совпадать с --grad-start и --bg в base.css.
+const COLORS = {
+  dark: { start: '#082b45', end: '#0b0b0d', sheet: '#151619', other: '#0b0b0d' },
+  // В светлой теме на других вкладках шапка осталась белой, как была
+  light: { start: '#c9e4f8', end: '#f2f2f7', sheet: '#ffffff', other: '#ffffff' },
+};
+const theme = () => (document.documentElement.getAttribute('data-theme') === 'light' ? COLORS.light : COLORS.dark);
 // Доля высоты блока, на которой градиент доходит до цвета фона. Должна совпадать с base.css.
 export const GRAD_END = 0.6;
 // Шапка перекрашивается ступенями, а не каждый кадр: вызов идёт в нативную часть и фризит скролл.
@@ -24,17 +26,18 @@ function mix(a: string, b: string, t: number): string {
 }
 
 function compute(): string {
-  if (document.querySelector('.detail.show, .sheet.show')) return SHEET;
+  const c = theme();
+  if (document.querySelector('.detail.show, .sheet.show')) return c.sheet;
   const app = document.getElementById('app');
   const panel = document.querySelector('.panel') as HTMLElement | null;
   // Главная скрыта (другая вкладка): шапка цвета фона
-  if (!panel || !panel.offsetHeight) return END;
+  if (!panel || !panel.offsetHeight) return c.other;
   const h = panel.offsetHeight * GRAD_END;
   const raw = app && h ? Math.max(0, Math.min(1, app.scrollTop / h)) : 0;
-  return mix(START, END, Math.round(raw * STEPS) / STEPS);
+  return mix(c.start, c.end, Math.round(raw * STEPS) / STEPS);
 }
 
-/** Цвет шапки для тёмной темы по текущей прокрутке. */
+/** Цвет шапки по текущей прокрутке и теме. */
 export function topHeaderColor(): string {
   const c = compute();
   last = c;
@@ -42,7 +45,6 @@ export function topHeaderColor(): string {
 }
 
 function apply(): void {
-  if (document.documentElement.getAttribute('data-theme') !== 'dark') return;
   const c = compute();
   if (c === last) return;
   const tg = getTelegramWebApp();
