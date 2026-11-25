@@ -370,7 +370,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* Tab bar: liquid glass */
-.page { padding-bottom: calc(112px + env(safe-area-inset-bottom)); }
+.page { padding-bottom: calc(max(28px, calc(env(safe-area-inset-bottom) + 4px)) + 80px); }
 .screen[hidden] { display: none; }
 .screen.enter { animation: scr-in .3s cubic-bezier(.2, .8, .2, 1) both; }
 @keyframes scr-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
@@ -550,7 +550,7 @@ button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .dlg-b .pbtn.red { background: #ff453a; color: #fff; }
 .ph-card { margin: 0 16px; padding: 48px 24px; text-align: center; }
 .ph-text { color: var(--text-2); font-size: 15px; line-height: 20px; }
-.tabbar { position: fixed; left: 50%; bottom: max(8px, calc(env(safe-area-inset-bottom) - 12px)); transform: translateX(-50%); width: calc(100% - 32px); max-width: 420px; height: 64px; border-radius: 32px; z-index: 15; display: flex; padding: 4px; transition: transform .34s cubic-bezier(.2, .8, .2, 1), opacity .25s ease; }
+.tabbar { position: fixed; left: 50%; bottom: max(28px, calc(env(safe-area-inset-bottom) + 4px)); transform: translateX(-50%); width: calc(100% - 32px); max-width: 420px; height: 64px; border-radius: 32px; z-index: 15; display: flex; padding: 4px; transition: transform .34s cubic-bezier(.2, .8, .2, 1), opacity .25s ease; }
 .tabbar.away { transform: translate(-50%, 140%); opacity: 0; }
 .tb-glass { position: absolute; inset: 0; border-radius: inherit; background: var(--tb-glass); -webkit-backdrop-filter: blur(8px) saturate(170%); backdrop-filter: blur(8px) saturate(170%);
   box-shadow: 0 12px 32px rgba(0, 0, 0, .5); }
