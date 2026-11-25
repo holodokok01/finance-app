@@ -11,11 +11,16 @@ import { countUp } from '../../lib/countUp';
 
 const EASE_OUT = 'cubic-bezier(.2, .8, .2, 1)';
 
-function Delta({ diff, inc, sym }: { diff: number; inc: boolean; sym: string }) {
+export function Delta({ diff, inc, sym, fade }: { diff: number; inc: boolean; sym: string; fade?: boolean }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  /* при вставке в уже живую плитку или строку число мягко проявляется */
+  useLayoutEffect(() => {
+    if (fade) ref.current?.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 320, easing: 'ease-out' });
+  }, []);
   const v = Math.round(diff);
-  if (!v) return <span className="dl eq">0 {sym}</span>;
+  if (!v) return <span ref={ref} className="dl eq">0 {sym}</span>;
   return (
-    <span className={'dl ' + (diff > 0 !== inc ? 'bad' : 'good')}>
+    <span ref={ref} className={'dl ' + (diff > 0 !== inc ? 'bad' : 'good')}>
       {(diff > 0 ? '↑ ' : '↓ ') + groupThousands(Math.abs(v)) + ' ' + sym}
     </span>
   );

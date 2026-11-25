@@ -6,13 +6,15 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import { haptic } from '../../services/telegram';
 import { L } from '../../i18n';
 import { StatsScreen } from '../stats/StatsScreen';
+import { Transaction } from '../../types/fin';
 import { refreshTopColor } from '../../lib/topColor';
 
 interface AppLayoutProps {
   children?: React.ReactNode;
+  onSelectTransaction: (tx: Transaction) => void;
 }
 
-export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
+export const AppLayout: React.FC<AppLayoutProps> = ({ children, onSelectTransaction }) => {
   usePressFeedback();
 
   const [currentTab, setCurrentTab] = useState<TabKey>('home');
@@ -56,7 +58,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           id="scr-stats"
           hidden={currentTab !== 'stats'}
         >
-          <StatsScreen active={currentTab === 'stats'} />
+          <StatsScreen active={currentTab === 'stats'} onSelectTransaction={onSelectTransaction} />
         </div>
 
         <div

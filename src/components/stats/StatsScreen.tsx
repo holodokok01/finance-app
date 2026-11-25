@@ -10,6 +10,8 @@ import { SegmentedControl } from '../ui/SegmentedControl';
 import { CHECK } from '../../assets/icons';
 import { Donut, DonutCat } from './Donut';
 import { CatList } from './CatList';
+import { SummaryCard } from './SummaryCard';
+import { Transaction } from '../../types/fin';
 import { statData } from '../../lib/statsView';
 import { periodRange, periodLabel } from '../../lib/stats';
 import { groupThousands, preSym, postSym, symOf } from '../../lib/balance';
@@ -50,7 +52,12 @@ function paintEurFit(el: HTMLElement, v: number, sym: string): void {
   }
 }
 
-export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
+interface StatsScreenProps {
+  active: boolean;
+  onSelectTransaction: (tx: Transaction) => void;
+}
+
+export const StatsScreen: React.FC<StatsScreenProps> = ({ active, onSelectTransaction }) => {
   const transactions = useAppStore(s => s.transactions);
   const categories = useAppStore(s => s.categories);
   const today = useAppStore(s => s.todayMidnight);
@@ -64,6 +71,8 @@ export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
   const [k, setK] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sel, setSel] = useState<string | null>(null);
+  /* выбранный тапом столбик «Сводки»; сбрасывается вместе с выбором категории */
+  const [bar, setBar] = useState<number | null>(null);
   const labelRef = useRef<HTMLDivElement>(null);
   const shownRef = useRef<number | null>(null);
 
@@ -173,6 +182,7 @@ export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
       if (!steps) return;
       flushSync(() => {
         setSel(null);
+        setBar(null);
         setK(k + steps);
       });
     },
@@ -187,6 +197,7 @@ export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
     haptic('select', hapticOn);
     dirRef.current = dk > 0 ? 'back' : 'fwd';
     setSel(null);
+    setBar(null);
     setK(nk);
   };
 
@@ -195,6 +206,7 @@ export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
     setMenuOpen(false);
     if (t === type) return;
     setSel(null);
+    setBar(null);
     setType(t);
     const el = typeTextRef.current;
     if (el) {
@@ -300,6 +312,7 @@ export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
             onChange={p => {
               dirRef.current = 'swap';
               setSel(null);
+              setBar(null);
               setPer(p);
               setK(0);
             }}
@@ -328,6 +341,19 @@ export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
         </div>
         <CatList d={d} sel={selCat ? selCat.cat : null} sym={sym} />
       </Squircle>
+      <SummaryCard
+        d={d}
+        per={per}
+        k={k}
+        today={today}
+        sym={sym}
+        lang={lang}
+        hapticOn={hapticOn}
+        active={active}
+        bar={bar}
+        onPickBar={setBar}
+        onSelectTransaction={onSelectTransaction}
+      />
     </>
   );
 };

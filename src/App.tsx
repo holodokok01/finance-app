@@ -73,7 +73,7 @@ export const App: React.FC = () => {
 
   return (
     <>
-      <AppLayout>
+      <AppLayout onSelectTransaction={handleSelectTransaction}>
         <HomeScreen
           onAddClick={handleOpenAdd}
           onSelectTransaction={handleSelectTransaction}
