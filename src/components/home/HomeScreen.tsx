@@ -44,7 +44,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const hapticEnabled = useSettingsStore(s => s.haptic);
 
   const ratesLive = useRatesStore(s => s.live);
-  const ratesDate = useRatesStore(s => s.date);
+  const ratesDate = useRatesStore(s => s.checkedDate || s.date);
   const ratesR = useRatesStore(s => s.r);
 
   const sym = symOf(base);

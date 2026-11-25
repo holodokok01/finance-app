@@ -12,6 +12,17 @@ export interface RatesData {
   live: boolean;
   date: string;
   r: Record<string, number>;
+  fetchedAt: number;
+}
+
+export const RATES_TTL = 12 * 60 * 60 * 1000;
+
+export function localDay(ts: number): string {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '-' + m + '-' + day;
 }
 
 let ISO: string[] | null = null;
@@ -35,39 +46,55 @@ export function parseRatesApi(j: any): RatesData {
   });
 
   if (n < 30) throw new Error('Too few currencies received');
-  return { live: true, date: j.date || '', r: out };
+  return { live: true, date: j.date || '', r: out, fetchedAt: Date.now() };
 }
 
-export async function fetchRates(): Promise<RatesData> {
-  const urls = [
-    'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/eur.min.json',
-    'https://latest.currency-api.pages.dev/v1/currencies/eur.min.json',
-  ];
+const RATES_URLS = [
+  'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/eur.min.json',
+  'https://latest.currency-api.pages.dev/v1/currencies/eur.min.json',
+];
 
-  for (const url of urls) {
-    try {
-      const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
-      const timer = ctl ? setTimeout(() => ctl.abort(), 7000) : 0;
-      const res = await fetch(url, ctl ? { signal: ctl.signal } : undefined);
-      if (timer) clearTimeout(timer);
-      if (res.ok) {
-        const json = await res.json();
-        const parsed = parseRatesApi(json);
-        try {
-          localStorage.setItem('rx_v1', JSON.stringify({ date: parsed.date, r: parsed.r }));
-        } catch (e) {}
-        return parsed;
-      }
-    } catch (e) {}
+async function fetchOne(url: string): Promise<RatesData> {
+  const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = ctl ? setTimeout(() => ctl.abort(), 7000) : 0;
+  try {
+    const res = await fetch(url, ctl ? { signal: ctl.signal } : undefined);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return parseRatesApi(await res.json());
+  } finally {
+    if (timer) clearTimeout(timer);
   }
+}
 
-  // Fallback to cache if available
+export function loadCachedRates(): RatesData | null {
   try {
     const cached = JSON.parse(localStorage.getItem('rx_v1') || '');
     if (cached && cached.r && cached.r.USD) {
-      return { live: true, date: cached.date || '', r: cached.r };
+      return { live: true, date: cached.date || '', r: cached.r, fetchedAt: +cached.ts || 0 };
     }
   } catch (e) {}
+  return null;
+}
 
-  return { live: false, date: '', r: RX_FALLBACK };
+export async function fetchRates(): Promise<RatesData> {
+  // Оба зеркала сразу: jsdelivr может отдавать устаревшие данные, берём то, где дата новее.
+  const results = await Promise.allSettled(RATES_URLS.map(fetchOne));
+  const ok: RatesData[] = [];
+  results.forEach(r => {
+    if (r.status === 'fulfilled') ok.push(r.value);
+  });
+
+  if (ok.length) {
+    ok.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+    const best = ok[0];
+    try {
+      localStorage.setItem('rx_v1', JSON.stringify({ date: best.date, r: best.r, ts: best.fetchedAt }));
+    } catch (e) {}
+    return best;
+  }
+
+  const cached = loadCachedRates();
+  if (cached) return cached;
+
+  return { live: false, date: '', r: RX_FALLBACK, fetchedAt: 0 };
 }

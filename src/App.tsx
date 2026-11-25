@@ -31,6 +31,12 @@ export const App: React.FC = () => {
     loadStorage();
     loadRates();
 
+    // Возврат в приложение из фона: курс обновится, если кэш старше 12 часов
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') loadRates();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
     initTelegramSdk((tg) => {
       themeApply();
       cloudLoad();
