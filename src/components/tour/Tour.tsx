@@ -287,22 +287,24 @@ export const Tour: React.FC<Props> = ({ goTab }) => {
         >
           <path d="M0 10 C8 10 10 7 11 5 C12 3 13 2 14 2 C15 2 16 3 17 5 C18 7 20 10 28 10 Z" />
         </svg>
-        <div className="tour-prog" aria-hidden="true">
-          {steps.map((s, k) => (
-            <i key={s.id} className={k <= i ? 'on' : ''} />
-          ))}
-        </div>
         <h2 className="tour-title">{L(step.title)}</h2>
         <p className="tour-text">{L(step.text)}</p>
         <div className="tour-foot">
-          {!last && (
-            <button type="button" className="tour-skip" onClick={skip}>
-              {L('Пропустить')}
+          <div className="tour-dots" aria-hidden="true">
+            {steps.map((s, k) => (
+              <i key={s.id} className={k === i ? 'on' : ''} />
+            ))}
+          </div>
+          <div className="tour-btns">
+            {!last && (
+              <button type="button" className="tour-skip" onClick={skip}>
+                {L('Пропустить')}
+              </button>
+            )}
+            <button type="button" className="tour-next" onClick={next}>
+              {L(last ? 'Поехали' : 'Далее')}
             </button>
-          )}
-          <button type="button" className="tour-next" onClick={next}>
-            {L(last ? 'Поехали' : 'Далее')}
-          </button>
+          </div>
         </div>
       </div>
     </div>,
