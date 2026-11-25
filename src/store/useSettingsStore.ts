@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { Settings, ThemeSetting, LangCode } from '../types/settings';
 import { detectLang, setLanguage } from '../i18n';
 import { getTelegramWebApp } from '../services/telegram';
+import { topHeaderColor } from '../lib/topColor';
 
 interface SettingsState extends Settings {
   effectiveTheme: 'dark' | 'light';
@@ -71,8 +72,9 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const tg = getTelegramWebApp();
       if (tg) {
         try {
-          if (tg.setHeaderColor) tg.setHeaderColor(eff === 'light' ? '#ffffff' : '#0f1012');
-          if (tg.setBackgroundColor) tg.setBackgroundColor(color);
+          const top = eff === 'dark' ? topHeaderColor() : null;
+          if (tg.setHeaderColor) tg.setHeaderColor(eff === 'light' ? '#ffffff' : top || '#0f1012');
+          if (tg.setBackgroundColor) tg.setBackgroundColor(eff === 'dark' && top ? '#0b0b0d' : color);
         } catch (e) {}
       }
     }

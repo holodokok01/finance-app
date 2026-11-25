@@ -1,14 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { getTelegramWebApp } from '../../services/telegram';
+import { applyTopHeaderColor } from '../../lib/topColor';
 import { useSettingsStore } from '../../store/useSettingsStore';
 
 // ВРЕМЕННО: переключатель вида верхнего блока Главной. Удалить после выбора.
 type Variant = 'grad' | 'round';
 
-const HEADER: Record<Variant, string> = {
-  grad: '#082b45',
-  round: '#151619',
-};
 const LABEL: Record<Variant, string> = {
   grad: 'Верх: градиент',
   round: 'Верх: скруглённый',
@@ -32,14 +28,23 @@ export const SectionVariantSwitch: React.FC = () => {
       localStorage.setItem('dbg_top', v);
     } catch (e) {}
     themeApply();
-    const tg = getTelegramWebApp();
-    if (tg && document.documentElement.getAttribute('data-theme') === 'dark') {
-      try {
-        if (tg.setBackgroundColor) tg.setBackgroundColor('#0b0b0d');
-        if (tg.setHeaderColor) tg.setHeaderColor(HEADER[v]);
-      } catch (e) {}
-    }
+    applyTopHeaderColor();
   }, [v]);
+
+  useEffect(() => {
+    const app = document.getElementById('app');
+    if (!app) return;
+    let raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        applyTopHeaderColor();
+      });
+    };
+    app.addEventListener('scroll', onScroll, { passive: true });
+    return () => app.removeEventListener('scroll', onScroll);
+  }, []);
 
   return (
     <button
