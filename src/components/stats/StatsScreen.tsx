@@ -6,6 +6,8 @@ import { Squircle } from '../ui/Squircle';
 import { SegmentedControl } from '../ui/SegmentedControl';
 import { CHECK } from '../../assets/icons';
 import { Donut, DonutCat } from './Donut';
+import { CatList } from './CatList';
+import { statData } from '../../lib/statsView';
 import { periodRange, periodLabel } from '../../lib/stats';
 import { groupThousands, preSym, postSym, symOf } from '../../lib/balance';
 import { L } from '../../i18n';
@@ -83,22 +85,11 @@ export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
 
   const canGoK = (kk: number) => kk >= 0 && periodRange(per, kk, today).to >= minTs;
 
+  const d = useMemo(() => statData(per, k, today, transactions, type === 'income'), [transactions, per, k, today, type]);
   const data = useMemo(() => {
-    const r = periodRange(per, k, today);
-    const inc = type === 'income';
-    const by: Record<string, DonutCat> = {};
-    for (const t of transactions) {
-      if (t.sum > 0 !== inc || t.ts < r.from || t.ts > r.to) continue;
-      const b = by[t.cat] || (by[t.cat] = { cat: t.cat, sum: 0, color: categories[t.cat]?.color || '#8e8e93' });
-      b.sum = Math.round((b.sum + Math.abs(t.sum)) * 100) / 100;
-    }
-    const cats = Object.keys(by)
-      .map(key => by[key])
-      .sort((a, b) => b.sum - a.sum);
-    let total = 0;
-    cats.forEach(c => (total += c.sum));
-    return { inc, cats, total: Math.round(total * 100) / 100 };
-  }, [transactions, categories, per, k, today, type]);
+    const cats: DonutCat[] = d.cats.map(c => ({ cat: c.cat, sum: c.sum, color: categories[c.cat]?.color || '#8e8e93' }));
+    return { inc: d.inc, cats, total: d.total };
+  }, [d, categories]);
 
   /* выбор сбрасывается, если категории больше нет в периоде */
   const selCat = sel ? data.cats.find(c => c.cat === sel) || null : null;
@@ -327,6 +318,7 @@ export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
             </div>
           </div>
         </div>
+        <CatList d={d} sel={selCat ? selCat.cat : null} sym={sym} />
       </Squircle>
     </>
   );
