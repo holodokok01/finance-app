@@ -9,30 +9,8 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="preload" as="image" href="/coin.webp">
-  <link rel="preload" as="image" href="/hand.webp">
-  <link rel="stylesheet" href="/loader.css">
 </head>
 <body>
-  <!-- прелоадер лежит прямо здесь, чтобы показаться раньше бандла; скрывает его hidePreloader() из src/lib/preloader.ts -->
-  <div id="loader">
-    <div class="mk-bg"></div>
-    <div class="mk-scene">
-      <img class="mk-hand" src="/hand.webp" alt="">
-      <img class="mk-swoosh" src="/swoosh.webp" alt="">
-      <div class="mk-toss"><img class="mk-coin" src="/coin.webp" alt=""></div>
-    </div>
-  </div>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="/loader.js"></script>
-  <script>
-    /* Telegram убирает свой экран загрузки и показывает наш; тема из настроек приложения (если выбрана вручную) */
-    try { window.Telegram.WebApp.ready(); } catch (e) {}
-    try {
-      var t = JSON.parse(localStorage.getItem('set_v1') || '{}').theme;
-      if (t === 'light' || t === 'dark') window.MonetkaLoader.setTheme(t);
-    } catch (e) {}
-  </script>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
 </body>
