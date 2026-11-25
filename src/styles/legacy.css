@@ -742,3 +742,6 @@ input { caret-color: var(--accent); }
 .rng .cal-day.rl { border-top-left-radius: 24px; border-bottom-left-radius: 24px; }
 .rng .cal-day.rr { border-top-right-radius: 24px; border-bottom-right-radius: 24px; }
 .rng .cal-day.nb { background: none; }
+
+/* Слой модала меняет высоту при клавиатуре плавно, вместе с ней */
+.detail { transition: height .3s cubic-bezier(.2, .8, .2, 1); }
