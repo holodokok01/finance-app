@@ -11,6 +11,7 @@ import { SettingsScreen } from '../settings/SettingsScreen';
 import { Transaction } from '../../types/fin';
 import { refreshTopColor } from '../../lib/topColor';
 import { BottomFade } from './BottomFade';
+import { Tour } from '../tour/Tour';
 
 interface AppLayoutProps {
   children?: React.ReactNode;
@@ -32,6 +33,14 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onSelectTransact
     }
     setCurrentTab(tab);
     haptic('select', hapticEnabled);
+    const app = document.getElementById('app');
+    if (app) app.scrollTop = 0;
+    requestAnimationFrame(refreshTopColor);
+  };
+
+  /* тур переключает вкладки сам, без вибрации */
+  const tourGoTab = (tab: TabKey) => {
+    setCurrentTab(tab);
     const app = document.getElementById('app');
     if (app) app.scrollTop = 0;
     requestAnimationFrame(refreshTopColor);
@@ -86,6 +95,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onSelectTransact
       <BottomFade />
       <TabBar currentTab={currentTab} onTabChange={handleTabChange} />
       <Toast />
+      <Tour goTab={tourGoTab} />
     </div>
   );
 };

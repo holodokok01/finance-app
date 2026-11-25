@@ -13,6 +13,7 @@ import { symOf } from '../../lib/balance';
 import { buildCsv, importCsv, ymdOf } from '../../lib/csv';
 import { cvFmt } from '../../lib/converter';
 import { refreshTopColor } from '../../lib/topColor';
+import { startTour } from '../../lib/tour';
 import { I18N, L, LANG_CODE, MONTHS_SHORT_L, plural } from '../../i18n';
 import { LangCode, ThemeSetting } from '../../types/settings';
 import * as IC from './settingsIcons';
@@ -324,6 +325,11 @@ export const SettingsScreen: React.FC<Props> = ({ onOpenPayments, onOpenCategori
           <span className="tsw" role="switch" aria-checked={hapticOn}>
             <i />
           </span>
+        </button>
+        <button type="button" className="set-row" id="set-tour" onClick={() => { hp('light'); startTour(); }}>
+          <Ic color="#ff9f0a" svg={IC.SET_IC_DEMO} />
+          <span className="set-k">{L('Показать обучение')}</span>
+          <Chev />
         </button>
       </Squircle>
 
