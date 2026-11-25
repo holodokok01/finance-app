@@ -6,7 +6,7 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 type Variant = 'grad' | 'round';
 
 const HEADER: Record<Variant, string> = {
-  grad: '#0a3556',
+  grad: '#082b45',
   round: '#151619',
 };
 const LABEL: Record<Variant, string> = {
