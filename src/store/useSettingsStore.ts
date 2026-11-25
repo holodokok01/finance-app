@@ -60,7 +60,7 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const html = document.documentElement;
       html.setAttribute('data-theme', eff);
 
-      const color = eff === 'light' ? '#f2f2f7' : '#000000';
+      const color = eff === 'light' ? '#f2f2f7' : '#0b0b0d';
       let meta = document.querySelector('meta[name="theme-color"]');
       if (!meta) {
         meta = document.createElement('meta');
@@ -72,9 +72,8 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const tg = getTelegramWebApp();
       if (tg) {
         try {
-          const top = eff === 'dark' ? topHeaderColor() : null;
-          if (tg.setHeaderColor) tg.setHeaderColor(eff === 'light' ? '#ffffff' : top || '#0f1012');
-          if (tg.setBackgroundColor) tg.setBackgroundColor(eff === 'dark' && top ? '#0b0b0d' : color);
+          if (tg.setHeaderColor) tg.setHeaderColor(eff === 'light' ? '#ffffff' : topHeaderColor());
+          if (tg.setBackgroundColor) tg.setBackgroundColor(color);
         } catch (e) {}
       }
     }

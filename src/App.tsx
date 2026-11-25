@@ -11,7 +11,7 @@ import { TransactionDetailSheet } from './components/home/TransactionDetailSheet
 import { PaymentsSheet } from './components/home/PaymentsSheet';
 import { PaymentEditorSheet } from './components/home/PaymentEditorSheet';
 import { Transaction, RecurringPayment } from './types/fin';
-import { SectionVariantSwitch } from './components/ui/SectionVariantSwitch';
+import { startTopColor } from './lib/topColor';
 
 export const App: React.FC = () => {
   const themeApply = useSettingsStore(s => s.themeApply);
@@ -31,6 +31,7 @@ export const App: React.FC = () => {
     themeApply();
     loadStorage();
     loadRates();
+    startTopColor();
 
     // Возврат в приложение из фона: курс обновится, если кэш старше 12 часов
     const onVisible = () => {
@@ -72,7 +73,6 @@ export const App: React.FC = () => {
 
   return (
     <>
-      <SectionVariantSwitch />
       <AppLayout>
         <HomeScreen
           onAddClick={handleOpenAdd}

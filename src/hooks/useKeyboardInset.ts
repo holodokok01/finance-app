@@ -35,8 +35,8 @@ const setTgBg = (useSheet: boolean) => {
   const tg = w.Telegram && w.Telegram.WebApp;
   if (!tg) return;
   const light = document.documentElement.getAttribute('data-theme') === 'light';
-  const panel = getComputedStyle(document.documentElement).getPropertyValue('--panel').trim() || (light ? '#ffffff' : '#0f1012');
-  const c = useSheet ? panel : light ? '#f2f2f7' : '#000000';
+  const panel = getComputedStyle(document.documentElement).getPropertyValue('--panel').trim() || (light ? '#ffffff' : '#151619');
+  const c = useSheet ? panel : light ? '#f2f2f7' : '#0b0b0d';
   try {
     if (tg.setBackgroundColor) tg.setBackgroundColor(c);
     if (tg.setBottomBarColor) tg.setBottomBarColor(c);

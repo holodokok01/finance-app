@@ -7,16 +7,11 @@
   flex-direction: column;
 }
 
-/* ВРЕМЕННО: верхний блок Главной на всю ширину, варианты grad и round (см. SectionVariantSwitch).
-   Цвета варианта 3 для тёмной темы. Секции 2 и 3 остаются карточками. */
-html[data-top] .panel { margin: 0; padding-top: 32px; }
-html[data-top][data-theme="dark"] body { background: #0b0b0d; }
-html[data-top][data-theme="dark"] .page { --bg: #0b0b0d; --panel: #151619; --raise: #1f2024; }
-html[data-top="grad"][data-theme="dark"] .panel.sq { background: linear-gradient(180deg, #082b45 0%, #0b0b0d 60%); }
-html[data-top="grad"][data-theme="dark"] .panel.sq::before { background: transparent; }
-/* Плитки 30 дней как фон секции Операции */
-html[data-top="grad"][data-theme="dark"] .panel .stat { --fill: var(--panel); }
+/* Верхний блок Главной: градиент бренд-цвета сверху вниз, тёмная тема. Высота градиента (60%) должна совпадать с GRAD_END в lib/topColor.ts. */
+html[data-theme="dark"] .panel.sq { background: linear-gradient(180deg, #082b45 0%, #0b0b0d 60%); }
+html[data-theme="dark"] .panel.sq::before { background: transparent; }
+html[data-theme="dark"] .panel .stat { --fill: var(--panel); }
 /* --edge прозрачный, иначе полупрозрачная заливка рисуется дважды (фон и ::before) и выходит светлее */
-html[data-top="grad"][data-theme="dark"] .panel .action.disabled .action-pill { --edge: transparent; --fill: rgba(0, 0, 0, .24); }
-html[data-top="grad"][data-theme="dark"] .panel .balance-label { color: rgba(255, 255, 255, .64); }
-html[data-top="grad"][data-theme="dark"] .panel .balance-amount .cents { color: rgba(255, 255, 255, .48); }
+html[data-theme="dark"] .panel .action.disabled .action-pill { --edge: transparent; --fill: rgba(0, 0, 0, .24); }
+html[data-theme="dark"] .panel .balance-label { color: rgba(255, 255, 255, .64); }
+html[data-theme="dark"] .panel .balance-amount .cents { color: rgba(255, 255, 255, .48); }

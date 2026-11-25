@@ -6,7 +6,7 @@ import { Squircle } from './Squircle';
 
 export function catTint(hex: string, effectiveTheme: 'dark' | 'light'): string {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
-  if (!m) return effectiveTheme === 'light' ? '#f2f2f7' : '#1a1b1f';
+  if (!m) return effectiveTheme === 'light' ? '#f2f2f7' : '#1f2024';
   const n = parseInt(m[1], 16);
   const r = (n >> 16) & 255;
   const g = (n >> 8) & 255;
