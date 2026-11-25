@@ -1,4 +1,6 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
+import { useStripSwipe } from '../../hooks/useStripSwipe';
 import { useAppStore } from '../../store/useAppStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { haptic } from '../../services/telegram';
@@ -70,6 +72,7 @@ export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
   const menuRef = useRef<HTMLElement>(null);
   const monthsRef = useRef<HTMLDivElement>(null);
   const stripRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLElement>(null);
   const totalRef = useRef<HTMLDivElement>(null);
   const typeTextRef = useRef<HTMLSpanElement>(null);
   const dirRef = useRef<Dir>(null);
@@ -169,6 +172,22 @@ export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
     };
     step(t0);
   }, [shown, sym, active]);
+
+  useStripSwipe({
+    cardRef,
+    monthsRef,
+    stripRef,
+    getState: () => ({ k, canGoK, label: kk => stripLabel(per, kk, today, lang), hapticOn }),
+    onFinish: (steps, cleanup) => {
+      /* следы жеста убираются до перерисовки, в том же кадре: без мигания */
+      cleanup();
+      if (!steps) return;
+      flushSync(() => {
+        setSel(null);
+        setK(k + steps);
+      });
+    },
+  });
 
   const goPeriod = (dk: number) => {
     const nk = k + dk;
@@ -298,7 +317,7 @@ export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
           />
         </div>
       </div>
-      <Squircle r={32} className="ops-card st-card" id="st-card">
+      <Squircle r={32} className="ops-card st-card" id="st-card" ref={cardRef}>
         <div
           className="st-months"
           id="st-months"
