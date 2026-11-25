@@ -14,6 +14,7 @@ import { CategoriesFlow } from './components/categories/CategoriesFlow';
 import { CategoryEditorSheet, EditTarget } from './components/categories/CategoryEditorSheet';
 import { Transaction, RecurringPayment } from './types/fin';
 import { startTopColor } from './lib/topColor';
+import { hidePreloader } from './lib/preloader';
 
 export const App: React.FC = () => {
   const themeApply = useSettingsStore(s => s.themeApply);
@@ -42,6 +43,8 @@ export const App: React.FC = () => {
     loadStorage();
     loadRates();
     startTopColor();
+    /* данные из localStorage уже в сторах; после первой отрисовки прячем прелоадер */
+    requestAnimationFrame(() => requestAnimationFrame(hidePreloader));
 
     // Возврат в приложение из фона: курс обновится, если кэш старше 12 часов
     const onVisible = () => {
