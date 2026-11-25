@@ -16,9 +16,10 @@ interface AppLayoutProps {
   children?: React.ReactNode;
   onSelectTransaction: (tx: Transaction) => void;
   onOpenPayments: () => void;
+  onOpenCategories: () => void;
 }
 
-export const AppLayout: React.FC<AppLayoutProps> = ({ children, onSelectTransaction, onOpenPayments }) => {
+export const AppLayout: React.FC<AppLayoutProps> = ({ children, onSelectTransaction, onOpenPayments, onOpenCategories }) => {
   usePressFeedback();
 
   const [currentTab, setCurrentTab] = useState<TabKey>('home');
@@ -78,7 +79,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onSelectTransact
           id="scr-settings"
           hidden={currentTab !== 'settings'}
         >
-          <SettingsScreen onOpenPayments={onOpenPayments} />
+          <SettingsScreen onOpenPayments={onOpenPayments} onOpenCategories={onOpenCategories} />
         </div>
       </main>
 

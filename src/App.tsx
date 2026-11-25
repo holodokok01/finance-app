@@ -10,6 +10,7 @@ import { FullListSheet } from './components/home/FullListSheet';
 import { TransactionDetailSheet } from './components/home/TransactionDetailSheet';
 import { PaymentsSheet } from './components/home/PaymentsSheet';
 import { PaymentEditorSheet } from './components/home/PaymentEditorSheet';
+import { CategoriesFlow } from './components/categories/CategoriesFlow';
 import { Transaction, RecurringPayment } from './types/fin';
 import { startTopColor } from './lib/topColor';
 
@@ -30,6 +31,7 @@ export const App: React.FC = () => {
   const [detailId, setDetailId] = useState<number | null>(null);
   const [listOpen, setListOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
+  const [catsOpen, setCatsOpen] = useState(false);
   const [payEdit, setPayEdit] = useState<{ id: string | null } | null>(null);
 
   useEffect(() => {
@@ -78,7 +80,7 @@ export const App: React.FC = () => {
 
   return (
     <>
-      <AppLayout onSelectTransaction={handleSelectTransaction} onOpenPayments={() => setPayOpen(true)}>
+      <AppLayout onSelectTransaction={handleSelectTransaction} onOpenPayments={() => setPayOpen(true)} onOpenCategories={() => setCatsOpen(true)}>
         <HomeScreen
           onAddClick={handleOpenAdd}
           onSelectTransaction={handleSelectTransaction}
@@ -92,6 +94,7 @@ export const App: React.FC = () => {
         onClose={() => setListOpen(false)}
         onSelectTransaction={handleSelectTransaction}
       />
+      <CategoriesFlow open={catsOpen} onClose={() => setCatsOpen(false)} />
       <PaymentsSheet open={payOpen} onClose={() => setPayOpen(false)} onEdit={id => setPayEdit({ id })} />
       <PaymentEditorSheet target={payEdit} onClose={() => setPayEdit(null)} />
       <TransactionDetailSheet

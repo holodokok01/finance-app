@@ -33,9 +33,10 @@ const Svg: React.FC<{ svg: string }> = ({ svg }) => <svg viewBox="0 0 24 24" dan
 
 interface Props {
   onOpenPayments: () => void;
+  onOpenCategories: () => void;
 }
 
-export const SettingsScreen: React.FC<Props> = ({ onOpenPayments }) => {
+export const SettingsScreen: React.FC<Props> = ({ onOpenPayments, onOpenCategories }) => {
   const base = useSettingsStore(s => s.base);
   const lang = (useSettingsStore(s => s.lang) || 'ru') as LangCode;
   const theme = (useSettingsStore(s => s.theme) || 'system') as ThemeSetting;
@@ -245,7 +246,7 @@ export const SettingsScreen: React.FC<Props> = ({ onOpenPayments }) => {
           <span className="set-v">{base + (sym !== base ? ' ' + sym : '')}</span>
           <Chev />
         </button>
-        <button type="button" className="set-row" id="set-cats" onClick={() => { hp('light'); toast('Категории добавим позже'); }}>
+        <button type="button" className="set-row" id="set-cats" onClick={() => { hp('light'); onOpenCategories(); }}>
           <Ic color="#ff375f" svg={IC.SET_IC_CATS} />
           <span className="set-k">{L('Категории')}</span>
           <Chev />
