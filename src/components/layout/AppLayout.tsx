@@ -40,6 +40,8 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onSelectTransact
 
   /* тур переключает вкладки сам, без вибрации */
   const tourGoTab = (tab: TabKey) => {
+    /* та же вкладка: ничего не сбрасываем, иначе страница дёргается */
+    if (tab === currentTab) return;
     setCurrentTab(tab);
     const app = document.getElementById('app');
     if (app) app.scrollTop = 0;

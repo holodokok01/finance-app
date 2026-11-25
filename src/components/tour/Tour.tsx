@@ -51,6 +51,22 @@ const frames = (n: number) =>
 
 const wait = (ms: number) => new Promise<void>(res => setTimeout(res, ms));
 
+/* Плавная прокрутка тем же ease-out, что и у выреза: страница и рамка едут вместе */
+const SCROLL_MS = 420;
+const tweenScroll = (el: HTMLElement, from: number, to: number, cancelled: () => boolean) =>
+  new Promise<void>(res => {
+    const t0 = performance.now();
+    const tick = (now: number) => {
+      if (cancelled()) return res();
+      const k = Math.min(1, (now - t0) / SCROLL_MS);
+      const e = 1 - Math.pow(1 - k, 3);
+      el.scrollTop = Math.round(from + (to - from) * e);
+      if (k < 1) requestAnimationFrame(tick);
+      else res();
+    };
+    requestAnimationFrame(tick);
+  });
+
 const isShown = (el: Element | null): el is HTMLElement => !!el && (el as HTMLElement).getClientRects().length > 0;
 
 function findTarget(step: TourStep): Found | null {
@@ -87,9 +103,11 @@ export const Tour: React.FC<Props> = ({ goTab }) => {
   goTabRef.current = goTab;
   const activeRef = useRef(false);
   const runRef = useRef(0);
+  const scrollingRef = useRef(false);
 
   const finish = useCallback(() => {
     runRef.current++;
+    scrollingRef.current = false;
     markTourDone();
     activeRef.current = false;
     targetRef.current = null;
@@ -101,6 +119,7 @@ export const Tour: React.FC<Props> = ({ goTab }) => {
     setReady(false);
     setI(0);
     goTabRef.current('home');
+    document.getElementById('app')?.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   /* старт: уходим на Главную, смотрим какие шаги реально есть на экране */
@@ -132,6 +151,8 @@ export const Tour: React.FC<Props> = ({ goTab }) => {
 
   const measure = useCallback(() => {
     const t = targetRef.current;
+    /* пока едет прокрутка, рамка уже стоит на конечном месте */
+    if (scrollingRef.current) return;
     /* скрытый экран даёт нулевой прямоугольник в углу: такой замер игнорируем */
     if (!t || !t.els.every(e => e.isConnected && e.getClientRects().length > 0)) return;
     const box = unionBox(t.els.map(e => e.getBoundingClientRect()));
@@ -198,13 +219,24 @@ export const Tour: React.FC<Props> = ({ goTab }) => {
       const inBar = !!found.els[0].closest('.tabbar');
       if (!inBar) {
         const app = document.getElementById('app');
-        const b = unionBox(found.els.map(e => e.getBoundingClientRect()));
+        const box = unionBox(found.els.map(e => e.getBoundingClientRect()));
         const vh = window.innerHeight;
-        if (app && (b.top < 24 || b.top + b.height > vh - 140)) {
+        if (app && (box.top < 24 || box.top + box.height > vh - 140)) {
           const want = Math.round(vh * 0.22);
-          app.scrollTop = Math.max(0, Math.round(app.scrollTop + b.top - want));
-          await frames(2);
-          if (run !== runRef.current) return;
+          const s0 = app.scrollTop;
+          const max = Math.max(0, app.scrollHeight - app.clientHeight);
+          const s1 = Math.max(0, Math.min(max, Math.round(s0 + box.top - want)));
+          const delta = s1 - s0;
+          if (delta !== 0) {
+            /* рамка сразу едет на место, где элемент окажется после прокрутки */
+            scrollingRef.current = true;
+            const next = cutRect({ ...box, top: box.top - delta }, found.pad);
+            setCut(prev => (same(prev, next) ? prev : next));
+            setRadius(found.r + found.pad);
+            await tweenScroll(app, s0, s1, () => run !== runRef.current);
+            scrollingRef.current = false;
+            if (run !== runRef.current) return;
+          }
         }
       }
       measure();
