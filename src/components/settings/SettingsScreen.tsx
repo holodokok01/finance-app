@@ -72,6 +72,7 @@ export const SettingsScreen: React.FC<Props> = ({ onOpenPayments, onOpenCategori
     const opening = r2(app.opening * k);
     useAppStore.setState({
       transactions: app.transactions.map(t => ({ ...t, sum: r2(t.sum * k) })),
+      payments: app.payments.map(p => ({ ...p, sum: r2(p.sum * k) })),
       opening,
       base: c,
     });
