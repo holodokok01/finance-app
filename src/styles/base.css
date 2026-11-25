@@ -6,3 +6,16 @@
   display: flex;
   flex-direction: column;
 }
+
+/* ВРЕМЕННО: секции Главной на всю ширину, варианты 1 и 3 (см. SectionVariantSwitch) */
+html[data-sec] .panel.sq,
+html[data-sec] .ops-card.sq,
+html[data-sec] .panel.sq::before,
+html[data-sec] .ops-card.sq::before {
+  border-radius: 0;
+  clip-path: none;
+}
+html[data-sec] .panel { margin-left: 0; margin-right: 0; }
+html[data-sec] .ops { padding-left: 0; padding-right: 0; }
+html[data-sec="3"][data-theme="dark"] body { background: #0b0b0d; }
+html[data-sec="3"][data-theme="dark"] .page { --bg: #0b0b0d; --panel: #151619; --raise: #1f2024; }

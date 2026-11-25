@@ -11,6 +11,7 @@ import { TransactionDetailSheet } from './components/home/TransactionDetailSheet
 import { PaymentsSheet } from './components/home/PaymentsSheet';
 import { PaymentEditorSheet } from './components/home/PaymentEditorSheet';
 import { Transaction, RecurringPayment } from './types/fin';
+import { SectionVariantSwitch } from './components/ui/SectionVariantSwitch';
 
 export const App: React.FC = () => {
   const themeApply = useSettingsStore(s => s.themeApply);
@@ -71,6 +72,7 @@ export const App: React.FC = () => {
 
   return (
     <>
+      <SectionVariantSwitch />
       <AppLayout>
         <HomeScreen
           onAddClick={handleOpenAdd}
