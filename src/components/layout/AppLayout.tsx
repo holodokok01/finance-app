@@ -6,6 +6,7 @@ import { useSettingsStore } from '../../store/useSettingsStore';
 import { haptic } from '../../services/telegram';
 import { L } from '../../i18n';
 import { StatsScreen } from '../stats/StatsScreen';
+import { ConverterScreen } from '../converter/ConverterScreen';
 import { Transaction } from '../../types/fin';
 import { refreshTopColor } from '../../lib/topColor';
 import { BottomFade } from './BottomFade';
@@ -67,14 +68,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onSelectTransact
           id="scr-convert"
           hidden={currentTab !== 'convert'}
         >
-          <div className="scr-head cv-head">
-            <div>
-              <h1 className="scr-title">{L('Конвертер')}</h1>
-              <div className="cv-src" id="cv-src">
-                {L('Примерный курс')}
-              </div>
-            </div>
-          </div>
+          <ConverterScreen />
         </div>
 
         <div
