@@ -3,6 +3,8 @@ import { getTelegramWebApp } from '../services/telegram';
 // Цвет шапки Telegram следует за градиентом верхнего блока при прокрутке (тёмная тема).
 const START = '#082b45';
 const END = '#0b0b0d';
+// Когда открыт шит или модал, под шапкой нет градиента, шапка серая как сам шит.
+const SHEET = '#151619';
 // Доля высоты блока, на которой градиент доходит до цвета фона. Должна совпадать с base.css.
 export const GRAD_END = 0.6;
 // Шапка перекрашивается ступенями, а не каждый кадр: вызов идёт в нативную часть и фризит скролл.
@@ -22,6 +24,7 @@ function mix(a: string, b: string, t: number): string {
 }
 
 function compute(): string {
+  if (document.querySelector('.detail.show, .sheet.show')) return SHEET;
   const app = document.getElementById('app');
   const panel = document.querySelector('.panel') as HTMLElement | null;
   const h = panel ? panel.offsetHeight * GRAD_END : 0;
@@ -52,15 +55,14 @@ export function startTopColor(): void {
   const app = document.getElementById('app');
   if (!app) return;
   let raf = 0;
-  app.addEventListener(
-    'scroll',
-    () => {
-      if (raf) return;
-      raf = requestAnimationFrame(() => {
-        raf = 0;
-        apply();
-      });
-    },
-    { passive: true }
-  );
+  const schedule = () => {
+    if (raf) return;
+    raf = requestAnimationFrame(() => {
+      raf = 0;
+      apply();
+    });
+  };
+  app.addEventListener('scroll', schedule, { passive: true });
+  // Шиты открываются и закрываются сменой класса show
+  new MutationObserver(schedule).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
 }
