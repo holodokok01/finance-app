@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { useStripSwipe } from '../../hooks/useStripSwipe';
+import { countUp } from '../../lib/countUp';
 import { useAppStore } from '../../store/useAppStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { haptic } from '../../services/telegram';
@@ -65,7 +66,6 @@ export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
   const [sel, setSel] = useState<string | null>(null);
   const labelRef = useRef<HTMLDivElement>(null);
   const shownRef = useRef<number | null>(null);
-  const tweenRef = useRef(0);
 
   const ctlRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -158,19 +158,8 @@ export const StatsScreen: React.FC<{ active: boolean }> = ({ active }) => {
     if (!el) return;
     const from = shownRef.current;
     shownRef.current = shown;
-    cancelAnimationFrame(tweenRef.current);
-    if (from === null || from === shown || !active) {
-      paintEurFit(el, shown, sym);
-      return;
-    }
-    const t0 = performance.now();
-    const step = (now: number) => {
-      const q = Math.min(1, (now - t0) / 450);
-      const e = 1 - Math.pow(1 - q, 3);
-      paintEurFit(el, Math.round((from + (shown - from) * e) * 100) / 100, sym);
-      if (q < 1) tweenRef.current = requestAnimationFrame(step);
-    };
-    step(t0);
+    const paint = (e: HTMLElement, v: number) => paintEurFit(e, v, sym);
+    countUp(el, from === null || !active ? shown : from, shown, paint);
   }, [shown, sym, active]);
 
   useStripSwipe({

@@ -4,6 +4,7 @@ import { CategoryTile } from '../ui/CategoryTile';
 import { formatCurrency, groupThousands } from '../../lib/balance';
 import { L, plural } from '../../i18n';
 import { CatStat, StatData } from '../../lib/statsView';
+import { countUp } from '../../lib/countUp';
 
 /* Список категорий под кольцом (stRowHtml, morphList и orderRows из legacy).
    Строки переезжают на новое место, суммы досчитываются, новые строки въезжают, ушедшие гаснут. */
@@ -18,22 +19,6 @@ function Delta({ diff, inc, sym }: { diff: number; inc: boolean; sym: string }) 
       {(diff > 0 ? '↑ ' : '↓ ') + groupThousands(Math.abs(v)) + ' ' + sym}
     </span>
   );
-}
-
-function tweenText(el: HTMLElement & { _raf?: number }, from: number, to: number, f: (v: number) => string) {
-  if (el._raf) cancelAnimationFrame(el._raf);
-  if (from === to || isNaN(from)) {
-    el.textContent = f(to);
-    return;
-  }
-  const t0 = performance.now();
-  const step = (now: number) => {
-    const k = Math.min(1, (now - t0) / 500);
-    const e = 1 - Math.pow(1 - k, 3);
-    el.textContent = f(Math.round((from + (to - from) * e) * 100) / 100);
-    if (k < 1) el._raf = requestAnimationFrame(step);
-  };
-  step(t0);
 }
 
 interface Snap {
@@ -100,7 +85,7 @@ export const CatList: React.FC<CatListProps> = ({ d, sel, sym, onOpen }) => {
         }
         if (morph) {
           const amt = r.querySelector('.row-amount') as HTMLElement | null;
-          if (amt && o.sum !== sum) tweenText(amt, o.sum, sum, fmt);
+          if (amt && o.sum !== sum) countUp(amt, o.sum, sum, (e, v) => (e.textContent = fmt(v)));
           r.querySelectorAll('.dl').forEach(x => (x as HTMLElement).animate([{ opacity: 0 }, { opacity: 1 }], { duration: 320, easing: 'ease-out' }));
         }
       } else if (hadRows && morph) {

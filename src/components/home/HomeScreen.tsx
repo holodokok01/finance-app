@@ -6,6 +6,7 @@ import { toast } from '../../store/useToastStore';
 import { haptic } from '../../services/telegram';
 import { Squircle } from '../ui/Squircle';
 import { Flag } from '../ui/Flag';
+import { CountUp } from '../ui/CountUp';
 import { TransactionRow } from './TransactionRow';
 import { PaymentRow } from './PaymentRow';
 import { formatBalanceParts, calcTotals30Days, groupThousands, symOf, formatCurrency } from '../../lib/balance';
@@ -48,7 +49,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const ratesR = useRatesStore(s => s.r);
 
   const sym = symOf(base);
-  const balParts = formatBalanceParts(balanceVal, base);
   const totals30 = calcTotals30Days(transactions, todayMidnight);
   const hasPayments = payments.length > 0;
   const freeBal = hasPayments ? calcFreeBalance(balanceVal, payments, todayMidnight) : 0;
@@ -87,20 +87,29 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       <Squircle as="section" r="0 0 32 32" className="panel" aria-label={L('Баланс')}>
         <div className="balance">
           <div className="balance-label">{L('Общий баланс')}</div>
-          <h1 className="balance-amount" id="balance">
-            {balParts.sign}
-            {balParts.pre}
-            {balParts.whole}
-            <span className="cents">
-              {balParts.cents}
-              {balParts.post}
-            </span>
-          </h1>
+          <CountUp
+            as="h1"
+            className="balance-amount"
+            id="balance"
+            value={balanceVal}
+            formatKey={base}
+            fromZeroId="balance"
+            paint={(el, v) => {
+              const b = formatBalanceParts(v, base);
+              el.innerHTML = b.sign + b.pre + b.whole + '<span class="cents">' + b.cents + b.post + '</span>';
+            }}
+          />
           <div className="bal-free" id="bal-free" hidden={!hasPayments}>
-            {hasPayments &&
-              L('Свободно {v}', {
-                v: (freeBal < 0 ? '−' : '') + formatCurrency(Math.abs(freeBal), sym),
-              })}
+            {hasPayments && (
+              <CountUp
+                value={freeBal}
+                formatKey={base + lang}
+                fromZeroId="bal-free"
+                paint={(el, v) => {
+                  el.textContent = L('Свободно {v}', { v: (v < 0 ? '−' : '') + formatCurrency(Math.abs(v), sym) });
+                }}
+              />
+            )}
           </div>
         </div>
 
@@ -188,15 +197,29 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
         <div className="stats">
           <Squircle r={28} className="stat">
             <span className="stat-label">{L('Доходы · 30 дн.')}</span>
-            <span className="stat-value plus" id="income">
-              +{formatCurrency(totals30.income, sym)}
-            </span>
+            <CountUp
+              className="stat-value plus"
+              id="income"
+              value={totals30.income}
+              formatKey={base}
+              fromZeroId="income"
+              paint={(el, v) => {
+                el.textContent = '+' + formatCurrency(v, sym);
+              }}
+            />
           </Squircle>
           <Squircle r={28} className="stat">
             <span className="stat-label">{L('Расходы · 30 дн.')}</span>
-            <span className="stat-value" id="expense">
-              −{formatCurrency(totals30.expense, sym)}
-            </span>
+            <CountUp
+              className="stat-value"
+              id="expense"
+              value={totals30.expense}
+              formatKey={base}
+              fromZeroId="expense"
+              paint={(el, v) => {
+                el.textContent = '−' + formatCurrency(v, sym);
+              }}
+            />
           </Squircle>
         </div>
       </Squircle>
@@ -286,8 +309,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             {pair.map((c, i) => {
               const cVal = Math.round((balanceVal / fromRate) * (ratesR[c] || 1));
               const cSym = symOf(c);
-              const formatted =
-                (cVal < 0 ? '−' : '') + groupThousands(Math.abs(cVal)) + '\u00a0' + cSym;
+              const id = i === 0 ? 'bal-usd' : 'bal-uah';
 
               return (
                 <Squircle key={c} r={24} className="rate">
@@ -297,9 +319,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
                       {L(FX_NAMES[c] || c)}
                     </span>
                   </span>
-                  <span className="rate-value" id={i === 0 ? 'bal-usd' : 'bal-uah'}>
-                    {formatted}
-                  </span>
+                  <CountUp
+                    className="rate-value"
+                    id={id}
+                    value={cVal}
+                    formatKey={c}
+                    fromZeroId={id}
+                    paint={(el, v) => {
+                      const x = Math.round(v);
+                      el.textContent = (x < 0 ? '−' : '') + groupThousands(Math.abs(x)) + '\u00a0' + cSym;
+                    }}
+                  />
                 </Squircle>
               );
             })}
