@@ -34,11 +34,11 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
   const [rendered, setRendered] = useState(isOpen);
   const [showClass, setShowClass] = useState(false);
   const calRef = useRef<HTMLDivElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
 
-  usePullToClose({
+  const { panelRef } = usePullToClose({
     onClose,
     enabled: isOpen,
+    scrollRef: calRef,
   });
 
   useEffect(() => {

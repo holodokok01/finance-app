@@ -118,9 +118,8 @@ export const AddTransactionSheet: React.FC<AddTransactionSheetProps> = ({
   const catsScrollRef = useRef<HTMLDivElement>(null);
   const noteInputRef = useRef<HTMLInputElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
 
-  usePullToClose({
+  const { panelRef } = usePullToClose({
     onClose,
     enabled: isOpen && !isDpOpen,
   });
