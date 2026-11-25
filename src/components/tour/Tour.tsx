@@ -40,6 +40,7 @@ interface Shape {
 interface Found {
   els: HTMLElement[];
   r: number;
+  pad: number;
 }
 
 const frames = (n: number) =>
@@ -55,7 +56,7 @@ const isShown = (el: Element | null): el is HTMLElement => !!el && (el as HTMLEl
 function findTarget(step: TourStep): Found | null {
   for (const t of step.targets) {
     const list = Array.from(document.querySelectorAll(t.sel)).filter(isShown);
-    if (list.length) return { els: t.all ? list : [list[0]], r: t.r };
+    if (list.length) return { els: t.all ? list : [list[0]], r: t.r, pad: t.pad ?? TOUR_PAD };
   }
   return null;
 }
@@ -131,11 +132,13 @@ export const Tour: React.FC<Props> = ({ goTab }) => {
 
   const measure = useCallback(() => {
     const t = targetRef.current;
-    if (!t || !t.els.every(e => e.isConnected)) return;
+    /* скрытый экран даёт нулевой прямоугольник в углу: такой замер игнорируем */
+    if (!t || !t.els.every(e => e.isConnected && e.getClientRects().length > 0)) return;
     const box = unionBox(t.els.map(e => e.getBoundingClientRect()));
-    const next = cutRect(box, TOUR_PAD);
+    if (box.width < 1 || box.height < 1) return;
+    const next = cutRect(box, t.pad);
     setCut(prev => (same(prev, next) ? prev : next));
-    setRadius(t.r + TOUR_PAD);
+    setRadius(t.r + t.pad);
   }, []);
 
   /* вырез плавно переезжает к новому элементу, все значения целые */
@@ -170,6 +173,8 @@ export const Tour: React.FC<Props> = ({ goTab }) => {
     const step = steps[i];
     if (!step) return;
     const run = ++runRef.current;
+    /* старая цель больше не нужна: иначе замеры по скрытому экрану уводят рамку в угол */
+    targetRef.current = null;
     setReady(false);
     (async () => {
       goTabRef.current(step.tab);

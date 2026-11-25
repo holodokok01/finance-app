@@ -96,6 +96,14 @@ describe('Тур: флаг пройден', () => {
 });
 
 describe('Тур: шаги', () => {
+  it('у строки операции больше воздуха, чем у остальных', () => {
+    const ops = TOUR_STEPS.find(s => s.id === 'ops')!;
+    expect(ops.targets[0].pad).toBe(8);
+    for (const s of TOUR_STEPS.filter(x => x.id !== 'ops')) {
+      for (const t of s.targets) expect(t.pad).toBeUndefined();
+    }
+  });
+
   it('у шагов есть цели, тексты и уникальные id', () => {
     const ids = TOUR_STEPS.map(s => s.id);
     expect(new Set(ids).size).toBe(ids.length);

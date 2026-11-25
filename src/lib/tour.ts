@@ -15,6 +15,8 @@ export interface TourTarget {
   r: number;
   /* true: подсветить сразу все найденные элементы одним общим вырезом */
   all?: boolean;
+  /* зазор до синей линии, по умолчанию TOUR_PAD */
+  pad?: number;
 }
 
 export interface TourStep {
@@ -56,7 +58,7 @@ export const TOUR_STEPS: TourStep[] = [
     id: 'ops',
     tab: 'home',
     targets: [
-      { sel: '#list .row', r: 16 },
+      { sel: '#list .row', r: 16, pad: 8 },
       { sel: '#ops-card', r: 32 },
     ],
     title: 'Операции',
