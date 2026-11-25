@@ -10,7 +10,7 @@ import { TransactionRow } from './TransactionRow';
 import { PaymentRow } from './PaymentRow';
 import { formatBalanceParts, calcTotals30Days, groupThousands, symOf, formatCurrency } from '../../lib/balance';
 import { calcFreeBalance } from '../../lib/payments';
-import { L, MONTHS_SHORT_L } from '../../i18n';
+import { L, LOC } from '../../i18n';
 import { Transaction, RecurringPayment } from '../../types/fin';
 
 const FX_NAMES: Record<string, string> = {
@@ -63,9 +63,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   const rxDate = () => {
     if (!ratesDate) return '';
     const p = ratesDate.split('-');
-    const mIdx = +p[1] - 1;
-    const mStr = (MONTHS_SHORT_L[lang] || MONTHS_SHORT_L['ru'])[mIdx] || '';
-    return +p[2] + ' ' + mStr;
+    const dt = new Date(+p[0], +p[1] - 1, +p[2]);
+    return new Intl.DateTimeFormat(LOC[lang] || LOC['ru'], { day: 'numeric', month: 'long' }).format(dt);
   };
 
   const ratesSrcText = ratesLive

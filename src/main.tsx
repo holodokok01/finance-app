@@ -3,7 +3,6 @@ import ReactDOM from 'react-dom/client';
 import { App } from './App';
 import './styles/base.css';
 import { startUpdateCheck } from './lib/updater';
-import { startDebugHud } from './lib/debugHud';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
@@ -12,4 +11,3 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 );
 
 startUpdateCheck();
-startDebugHud();
