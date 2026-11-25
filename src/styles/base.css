@@ -12,7 +12,7 @@
 html[data-top] .panel { margin: 0; padding-top: 32px; }
 html[data-top][data-theme="dark"] body { background: #0b0b0d; }
 html[data-top][data-theme="dark"] .page { --bg: #0b0b0d; --panel: #151619; --raise: #1f2024; }
-html[data-top="grad"][data-theme="dark"] .panel.sq { background: linear-gradient(180deg, #082b45 0%, #0b0b0d 100%); }
+html[data-top="grad"][data-theme="dark"] .panel.sq { background: linear-gradient(180deg, #082b45 0%, #0b0b0d 60%); }
 html[data-top="grad"][data-theme="dark"] .panel.sq::before { background: transparent; }
 /* Плитки 30 дней как фон секции Операции */
 html[data-top="grad"][data-theme="dark"] .panel .stat { --fill: var(--panel); }
