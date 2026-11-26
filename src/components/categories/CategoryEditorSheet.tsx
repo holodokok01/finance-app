@@ -58,6 +58,7 @@ export const CategoryEditorSheet: React.FC<Props> = ({ target, onClose, onDelete
   const [padH, setPadH] = useState(0);
   const padRef = useRef<HTMLDivElement>(null);
   const limRef = useRef<HTMLDivElement>(null);
+  const detRef = useRef<HTMLDivElement>(null);
   const [pickOpen, setPickOpen] = useState(false);
   const last = useRef<EditTarget | null>(target);
   if (target) last.current = target;
@@ -93,9 +94,13 @@ export const CategoryEditorSheet: React.FC<Props> = ({ target, onClose, onDelete
     if (!padOpen) return;
     const sc = scrollRef.current;
     const lim = limRef.current;
-    if (!sc || !lim) return;
+    const det = detRef.current;
+    const foot = det ? (det.querySelector('.ce-foot') as HTMLElement | null) : null;
+    if (!sc || !lim || !det || !foot) return;
+    /* высота области прокрутки после подъёма: шит минус верхний отступ, клавиатура и кнопки; текущую высоту не берём, она ещё анимируется */
+    const visible = det.clientHeight - 48 - padH - foot.offsetHeight;
     const bottom = lim.getBoundingClientRect().bottom - sc.getBoundingClientRect().top + sc.scrollTop;
-    const top = Math.round(bottom + 16 - (sc.clientHeight - padH));
+    const top = Math.round(bottom + 16 - visible);
     if (top > sc.scrollTop) sc.scrollTo({ top, behavior: 'smooth' });
   }, [padOpen, padH]);
 
@@ -231,6 +236,7 @@ export const CategoryEditorSheet: React.FC<Props> = ({ target, onClose, onDelete
   return (
     <>
       <div
+        ref={detRef}
         className={'detail cs' + (show ? ' show' : '')}
         id="ce"
         aria-hidden={!show}
