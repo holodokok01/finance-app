@@ -702,7 +702,7 @@ input { caret-color: var(--accent); }
 .row-sub.warn { color: #ff9f0a; }
 .row-sub.over { color: #ff453a; }
 .st-row.has-bud { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 0 12px; align-items: center; }
-.st-row.has-bud .bud { grid-column: 2 / 4; margin-top: 6px; }
+.st-row.has-bud .bud { grid-column: 1 / 4; margin-top: 8px; }
 .bud { display: block; height: 4px; border-radius: 2px; background: var(--dline); overflow: hidden; }
 .bud i { display: block; height: 4px; border-radius: 2px; background: var(--accent); }
 .bud.warn i { background: #ff9f0a; }
