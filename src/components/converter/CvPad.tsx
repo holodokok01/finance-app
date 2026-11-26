@@ -13,9 +13,11 @@ interface CvPadProps {
   onKey: (k: string) => void;
   onTick: () => void;
   onClose: () => void;
+  /** поверх шитов (у них z-index 40) */
+  zIndex?: number;
 }
 
-export const CvPad: React.FC<CvPadProps> = ({ open, padRef, onKey, onTick, onClose }) => {
+export const CvPad: React.FC<CvPadProps> = ({ open, padRef, onKey, onTick, onClose, zIndex }) => {
   const t1 = useRef(0);
   const t2 = useRef(0);
   const stopRepeat = () => {
@@ -68,7 +70,7 @@ export const CvPad: React.FC<CvPadProps> = ({ open, padRef, onKey, onTick, onClo
   }, [padRef]);
 
   return (
-    <Squircle r="32 32 0 0" className={'cv-pad' + (open ? ' show' : '')} id="cv-pad" ref={padRef as any} aria-hidden={!open}>
+    <Squircle r="32 32 0 0" className={'cv-pad' + (open ? ' show' : '')} id="cv-pad" ref={padRef as any} aria-hidden={!open} style={zIndex ? { zIndex } : undefined}>
       <div className="d-grab" />
       <div
         className="cv-keys"

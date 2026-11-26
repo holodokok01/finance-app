@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from
 import { Squircle, squirclePath } from '../ui/Squircle';
 import { catTint } from '../ui/CategoryTile';
 import { IconPickerSheet } from './IconPickerSheet';
+import { CvPad } from '../converter/CvPad';
 import { usePullToClose } from '../../hooks/usePullToClose';
 import { useSheetPresence } from '../../hooks/useSheetPresence';
 import { useAppStore } from '../../store/useAppStore';
@@ -47,7 +48,16 @@ export const CategoryEditorSheet: React.FC<Props> = ({ target, onClose, onDelete
   const [kind, setKind] = useState<'icon' | 'emoji'>('icon');
   const [icon, setIcon] = useState('');
   const [emoji, setEmoji] = useState('');
-  const [limit, setLimit] = useState('');
+  const [limit, setLimitState] = useState('');
+  const limitRef = useRef('');
+  const setLimit = (v: string) => {
+    limitRef.current = v;
+    setLimitState(v);
+  };
+  const [padOpen, setPadOpen] = useState(false);
+  const [padH, setPadH] = useState(0);
+  const padRef = useRef<HTMLDivElement>(null);
+  const limRef = useRef<HTMLDivElement>(null);
   const [pickOpen, setPickOpen] = useState(false);
   const last = useRef<EditTarget | null>(target);
   if (target) last.current = target;
@@ -65,8 +75,47 @@ export const CategoryEditorSheet: React.FC<Props> = ({ target, onClose, onDelete
   const close = useCallback(() => {
     if (document.activeElement === inputRef.current) inputRef.current?.blur();
     setPickOpen(false);
+    setPadOpen(false);
     onClose();
   }, [onClose]);
+
+  const closePad = useCallback(() => setPadOpen(false), []);
+  const openPad = () => {
+    if (padOpen) return;
+    if (document.activeElement === inputRef.current) inputRef.current?.blur();
+    setPadH(padRef.current ? padRef.current.offsetHeight : 0);
+    setPadOpen(true);
+    hp('light');
+    /* панель поднимается над клавиатурой (--kb), после этого поле должно быть на виду */
+    window.setTimeout(() => limRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 340);
+  };
+
+  const onKey = (raw: string) => {
+    const mark = raw.charAt(raw.length - 1);
+    const ticked = mark === '!' || mark === '~';
+    const k = ticked ? raw.slice(0, -1) : raw;
+    let s = limitRef.current;
+    if (k === 'del') s = s.slice(0, -1);
+    else if (k === ',') {
+      if (s.indexOf(',') >= 0) {
+        hp('error');
+        return;
+      }
+      s = (s || '0') + ',';
+    } else {
+      const n = cleanAmountInput(s === '0' ? k : s + k);
+      if (n === s) {
+        hp('error');
+        return;
+      }
+      s = n;
+    }
+    if (!ticked) hp('light');
+    else if (mark === '~') hp('select');
+    setLimit(s);
+  };
+  const onKeyRef = useRef(onKey);
+  onKeyRef.current = onKey;
   const { panelRef } = usePullToClose({ onClose: close, enabled: open && !pickOpen, scrollRef });
 
   /* при открытии заполняем черновик из категории (или новый со свободным цветом) */
@@ -80,6 +129,7 @@ export const CategoryEditorSheet: React.FC<Props> = ({ target, onClose, onDelete
     setKind(c && c.emoji ? 'emoji' : 'icon');
     const lv = target.k ? useAppStore.getState().budgets[target.k] : 0;
     setLimit(lv ? String(lv).replace('.', ',') : '');
+    setPadOpen(false);
     setPickOpen(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target && target.k, !!target]);
@@ -175,12 +225,15 @@ export const CategoryEditorSheet: React.FC<Props> = ({ target, onClose, onDelete
         className={'detail cs' + (show ? ' show' : '')}
         id="ce"
         aria-hidden={!show}
-        style={{ height: height ? height + 'px' : undefined, ['--kb' as string]: kb + 'px', transform: oy ? 'translateY(' + oy + 'px)' : undefined }}
+        style={{ height: height ? height + 'px' : undefined, ['--kb' as string]: (padOpen ? padH : kb) + 'px', transform: oy ? 'translateY(' + oy + 'px)' : undefined }}
+        onClickCapture={e => {
+          if (padOpen && !(e.target as HTMLElement).closest('.ce-lim, .detail-dim')) closePad();
+        }}
         onKeyDown={e => {
           if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT') (e.target as HTMLElement).blur();
         }}
       >
-        <div className="detail-dim" id="ce-dim" onClick={close} />
+        <div className="detail-dim" id="ce-dim" onClick={() => (padOpen ? closePad() : close())} />
         <Squircle r="32 32 0 0" className="detail-panel ce-panel" id="ce-panel" ref={panelRef as any}>
           <div className="ce-scroll" id="ce-scroll" ref={scrollRef}>
             <div className="d-grab" />
@@ -277,18 +330,12 @@ export const CategoryEditorSheet: React.FC<Props> = ({ target, onClose, onDelete
               ))}
             </div>
             {isExpense && (
-              <Squircle r={16} className="ce-lim">
+              <Squircle r={16} className={'ce-lim' + (padOpen ? ' f' : '')} ref={limRef as any} role="button" onClick={openPad}>
                 <span>{L('Лимит в месяц')}</span>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  autoComplete="off"
-                  enterKeyHint="done"
-                  maxLength={9}
-                  placeholder={L('Без лимита')}
-                  value={limit}
-                  onChange={e => setLimit(cleanAmountInput(e.target.value))}
-                />
+                <span className={'ce-lim-val' + (!limit && !padOpen ? ' ph' : '')}>
+                  {limit || (padOpen ? '' : L('Без лимита'))}
+                  <i className="ce-lim-c" />
+                </span>
                 <em>{symOf(base)}</em>
               </Squircle>
             )}
@@ -313,6 +360,7 @@ export const CategoryEditorSheet: React.FC<Props> = ({ target, onClose, onDelete
           </div>
         </Squircle>
       </div>
+      <CvPad open={padOpen && show} padRef={padRef} onKey={k => onKeyRef.current(k)} onTick={() => hp('light')} onClose={closePad} zIndex={50} />
       <IconPickerSheet
         open={pickOpen}
         onClose={() => setPickOpen(false)}

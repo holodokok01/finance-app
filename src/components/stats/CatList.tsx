@@ -176,7 +176,7 @@ export const CatList: React.FC<CatListProps> = ({ d, sel, sym, monthly, onOpen }
             <button
               key={k}
               type="button"
-              className={'row st-row' + (sel === k ? ' sel' : '')}
+              className={'row st-row' + (sel === k ? ' sel' : '') + (lim > 0 ? ' has-bud' : '')}
               data-cat={k}
               data-sum={c.sum}
               onClick={() => onOpen?.(k)}
@@ -197,16 +197,16 @@ export const CatList: React.FC<CatListProps> = ({ d, sel, sym, monthly, onOpen }
                           L('{a} из {b}', { a: groupThousands(Math.round(c.sum)), b: fmt(lim) })
                     : c.n + ' ' + plural(c.n, 'операция', 'операции', 'операций') + ' · ' + pct + '%'}
                 </span>
-                {lim > 0 && (
-                  <span className={'bud ' + st}>
-                    <i style={{ width: budgetPct(c.sum, lim) + '%' }} />
-                  </span>
-                )}
               </span>
               <span className="row-end">
                 <span className="row-amount">{fmt(c.sum)}</span>
                 {d.prev.has && <Delta diff={c.sum - (d.prev.cats[k] || 0)} inc={d.inc} sym={sym} />}
               </span>
+              {lim > 0 && (
+                <span className={'bud ' + st}>
+                  <i style={{ width: budgetPct(c.sum, lim) + '%' }} />
+                </span>
+              )}
             </button>
           );
         })}
