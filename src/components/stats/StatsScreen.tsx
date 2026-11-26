@@ -342,7 +342,7 @@ export const StatsScreen: React.FC<StatsScreenProps> = ({ active, onSelectTransa
             </div>
           </div>
         </div>
-        <CatList d={d} sel={selCat ? selCat.cat : null} sym={sym} onOpen={cat => setSpec({ kind: 'cat', cat })} />
+        <CatList d={d} sel={selCat ? selCat.cat : null} sym={sym} monthly={per === 'month'} onOpen={cat => setSpec({ kind: 'cat', cat })} />
       </Squircle>
       <SummaryCard
         d={d}

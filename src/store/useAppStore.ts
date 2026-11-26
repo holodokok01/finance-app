@@ -10,6 +10,7 @@ interface AppState {
   categories: Record<string, Category>;
   categoryOrder: CategoryOrder;
   payments: RecurringPayment[];
+  budgets: Record<string, number>;
   opening: number;
   base: string;
   savedAt: number;
@@ -25,6 +26,8 @@ interface AppState {
   updateTransaction: (id: number, tx: Partial<Transaction>) => void;
   deleteTransaction: (id: number) => Transaction | undefined;
   restoreTransaction: (index: number, tx: Transaction) => void;
+
+  setBudget: (id: string, limit: number) => void;
 
   addPayment: (p: RecurringPayment) => void;
   updatePayment: (id: string, p: Partial<RecurringPayment>) => void;
@@ -54,6 +57,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   categories: defaultCats.cats,
   categoryOrder: defaultCats.order,
   payments: [],
+  budgets: {},
   opening: 6000,
   base: 'EUR',
   savedAt: 0,
@@ -80,6 +84,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           categories: parsed.cats,
           categoryOrder: parsed.order,
           payments: parsed.pays,
+          budgets: parsed.bud,
           opening: parsed.opening,
           base: parsed.base,
           savedAt: parsed.at,
@@ -125,6 +130,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       categories: defaultCats.cats,
       categoryOrder: defaultCats.order,
       payments: [],
+      budgets: {},
       opening: 6000,
       base: 'EUR',
       savedAt: 0,
@@ -160,6 +166,7 @@ export const useAppStore = create<AppState>((set, get) => ({
                 categories: parsed.cats,
                 categoryOrder: parsed.order,
                 payments: parsed.pays,
+                budgets: parsed.bud,
                 opening: parsed.opening,
                 base: parsed.base,
                 savedAt: parsed.at,
@@ -177,7 +184,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   saveNow: () => {
     const s = get();
     const at = Date.now();
-    const str = packTx(at, s.base, s.opening, s.categories, s.categoryOrder, s.payments, s.transactions);
+    const str = packTx(at, s.base, s.opening, s.categories, s.categoryOrder, s.payments, s.transactions, s.budgets);
     set({ savedAt: at });
 
     try {
@@ -248,6 +255,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     get().saveSoon();
   },
 
+  setBudget: (id, limit) => {
+    const bud = { ...get().budgets };
+    if (limit > 0 && isFinite(limit)) bud[id] = limit;
+    else delete bud[id];
+    set({ budgets: bud });
+    get().saveSoon();
+  },
+
   addPayment: (p) => {
     set({ payments: [...get().payments, p] });
     get().saveSoon();
@@ -302,7 +317,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       txList = txList.filter(t => t.cat !== id);
     }
 
-    set({ categories: cats, categoryOrder: order, transactions: txList });
+    const bud = { ...get().budgets };
+    delete bud[id];
+
+    set({ categories: cats, categoryOrder: order, transactions: txList, budgets: bud });
     get().saveSoon();
   },
 

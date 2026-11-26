@@ -68,6 +68,7 @@ export interface ParsedSavedData {
   cats: Record<string, Category>;
   order: CategoryOrder;
   pays: RecurringPayment[];
+  bud: Record<string, number>;
   tx: Transaction[];
 }
 
@@ -97,6 +98,14 @@ export function applySaved(raw: string, todayMidnight: number): ParsedSavedData 
     const pays: RecurringPayment[] = Array.isArray(o.pays)
       ? o.pays.filter((q: RecurringPayment) => q && q.sum > 0 && q.next)
       : [];
+
+    const bud: Record<string, number> = {};
+    if (o.bud && typeof o.bud === 'object') {
+      for (const k in o.bud) {
+        const v = o.bud[k];
+        if (cats[k] && cats[k].type === 'expense' && typeof v === 'number' && isFinite(v) && v > 0) bud[k] = v;
+      }
+    }
 
     let nextId = 1;
     const tx: Transaction[] = [];
@@ -130,6 +139,7 @@ export function applySaved(raw: string, todayMidnight: number): ParsedSavedData 
       cats,
       order,
       pays,
+      bud,
       tx,
     };
   } catch (e) {
@@ -144,7 +154,8 @@ export function packTx(
   cats: Record<string, Category>,
   order: CategoryOrder,
   pays: RecurringPayment[],
-  tx: Transaction[]
+  tx: Transaction[],
+  bud: Record<string, number> = {}
 ): string {
   const catItems: Record<string, Omit<Category, 'id' | 'name'>> = {};
   for (const k in cats) {
@@ -167,6 +178,7 @@ export function packTx(
       items: catItems,
     },
     pays,
+    bud: Object.keys(bud).length ? bud : undefined,
     tx: tx.map(t => ({
       ts: t.ts,
       t: t.t,

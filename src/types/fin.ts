@@ -56,6 +56,7 @@ export interface FinV1Storage {
     items: Record<string, Omit<CategoryItem, 'id'>>;
   };
   pays: RecurringPayment[];
+  bud?: Record<string, number>; // лимит в месяц по id расходной категории, в основной валюте
   tx: Array<{
     ts: number;
     t: string;

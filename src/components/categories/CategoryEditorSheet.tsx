@@ -11,6 +11,8 @@ import { haptic } from '../../services/telegram';
 import { ICONS, ICONSET } from '../../assets/icons';
 import { CAT_PAL } from '../../lib/catData';
 import { catFreeColor, saveCategory } from '../../lib/categories';
+import { cleanAmountInput, parseAmount } from '../../lib/payments';
+import { symOf } from '../../lib/balance';
 import { L } from '../../i18n';
 import { CategoryType } from '../../types/fin';
 
@@ -45,6 +47,7 @@ export const CategoryEditorSheet: React.FC<Props> = ({ target, onClose, onDelete
   const [kind, setKind] = useState<'icon' | 'emoji'>('icon');
   const [icon, setIcon] = useState('');
   const [emoji, setEmoji] = useState('');
+  const [limit, setLimit] = useState('');
   const [pickOpen, setPickOpen] = useState(false);
   const last = useRef<EditTarget | null>(target);
   if (target) last.current = target;
@@ -75,11 +78,15 @@ export const CategoryEditorSheet: React.FC<Props> = ({ target, onClose, onDelete
     setIcon(c ? c.icon || '' : '');
     setEmoji(c ? c.emoji || '' : '');
     setKind(c && c.emoji ? 'emoji' : 'icon');
+    const lv = target.k ? useAppStore.getState().budgets[target.k] : 0;
+    setLimit(lv ? String(lv).replace('.', ',') : '');
     setPickOpen(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target && target.k, !!target]);
 
   const hasGlyph = kind === 'emoji' ? !!emoji : !!icon;
+  const base = useSettingsStore(s => s.base);
+  const isExpense = (cur && cur.k && categories[cur.k] ? categories[cur.k].type : cur ? cur.type : 'expense') === 'expense';
 
   /* своя каретка: стартует слева от подсказки и мигает */
   const placeCaret = useCallback((restart?: boolean) => {
@@ -151,6 +158,7 @@ export const CategoryEditorSheet: React.FC<Props> = ({ target, onClose, onDelete
     }
     const isNew = !(cur && cur.k);
     const k = saveCategory({ k: cur ? cur.k : null, type: cur ? cur.type : 'expense', name: nm, color, kind, icon, emoji });
+    if (isExpense) useAppStore.getState().setBudget(k, parseAmount(limit));
     hp('success');
     toast(isNew ? 'Категория создана' : 'Категория изменена');
     close();
@@ -268,6 +276,22 @@ export const CategoryEditorSheet: React.FC<Props> = ({ target, onClose, onDelete
                 />
               ))}
             </div>
+            {isExpense && (
+              <Squircle r={16} className="ce-lim">
+                <span>{L('Лимит в месяц')}</span>
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  autoComplete="off"
+                  enterKeyHint="done"
+                  maxLength={9}
+                  placeholder={L('Без лимита')}
+                  value={limit}
+                  onChange={e => setLimit(cleanAmountInput(e.target.value))}
+                />
+                <em>{symOf(base)}</em>
+              </Squircle>
+            )}
           </div>
           <div className="ce-foot" id="ce-foot">
             {cur.k && (

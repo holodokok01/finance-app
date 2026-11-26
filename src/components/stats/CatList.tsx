@@ -5,6 +5,7 @@ import { formatCurrency, groupThousands } from '../../lib/balance';
 import { L, plural } from '../../i18n';
 import { CatStat, StatData } from '../../lib/statsView';
 import { countUp } from '../../lib/countUp';
+import { budgetLeft, budgetPct, budgetState } from '../../lib/budget';
 
 /* Список категорий под кольцом (stRowHtml, morphList и orderRows из legacy).
    Строки переезжают на новое место, суммы досчитываются, новые строки въезжают, ушедшие гаснут. */
@@ -37,11 +38,14 @@ interface CatListProps {
   d: StatData;
   sel: string | null;
   sym: string;
+  /** бюджет показывается только за месяц */
+  monthly?: boolean;
   onOpen?: (cat: string) => void;
 }
 
-export const CatList: React.FC<CatListProps> = ({ d, sel, sym, onOpen }) => {
+export const CatList: React.FC<CatListProps> = ({ d, sel, sym, monthly, onOpen }) => {
   const categories = useAppStore(s => s.categories);
+  const budgets = useAppStore(s => s.budgets);
   const dayRef = useRef<HTMLDivElement>(null);
   const snapRef = useRef<Record<string, Snap>>({});
   /* новые данные (период, тип, операции): строки «морфятся»; смена выбора только переставляет их */
@@ -165,6 +169,9 @@ export const CatList: React.FC<CatListProps> = ({ d, sel, sym, onOpen }) => {
           const c = by[k];
           const pct = d.total ? Math.round((c.sum / d.total) * 100) : 0;
           const cat = categories[k];
+          const lim = monthly && !d.inc ? budgets[k] : 0;
+          const st = lim ? budgetState(c.sum, lim) : 'ok';
+          const left = lim ? budgetLeft(c.sum, lim) : 0;
           return (
             <button
               key={k}
@@ -177,9 +184,24 @@ export const CatList: React.FC<CatListProps> = ({ d, sel, sym, onOpen }) => {
               <CategoryTile cat={cat} radius={16} as="span" />
               <span className="row-main">
                 <span className="row-title">{cat?.name || k}</span>
-                <span className="row-sub">
-                  {c.n + ' ' + plural(c.n, 'операция', 'операции', 'операций') + ' · ' + pct + '%'}
+                <span className={'row-sub' + (st === 'warn' ? ' warn' : st === 'over' ? ' over' : '')}>
+                  {lim
+                    ? st === 'over'
+                      ? L('превышено на {v}', { v: fmt(-left) })
+                      : st === 'warn'
+                        ? L('осталось {v}', { v: fmt(left) })
+                        : c.n +
+                          ' ' +
+                          plural(c.n, 'операция', 'операции', 'операций') +
+                          ' · ' +
+                          L('{a} из {b}', { a: groupThousands(Math.round(c.sum)), b: fmt(lim) })
+                    : c.n + ' ' + plural(c.n, 'операция', 'операции', 'операций') + ' · ' + pct + '%'}
                 </span>
+                {lim > 0 && (
+                  <span className={'bud ' + st}>
+                    <i style={{ width: budgetPct(c.sum, lim) + '%' }} />
+                  </span>
+                )}
               </span>
               <span className="row-end">
                 <span className="row-amount">{fmt(c.sum)}</span>
