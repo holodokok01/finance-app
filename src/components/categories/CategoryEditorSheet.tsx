@@ -86,9 +86,18 @@ export const CategoryEditorSheet: React.FC<Props> = ({ target, onClose, onDelete
     setPadH(padRef.current ? padRef.current.offsetHeight : 0);
     setPadOpen(true);
     hp('light');
-    /* панель поднимается над клавиатурой (--kb), после этого поле должно быть на виду */
-    window.setTimeout(() => limRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 340);
   };
+
+  /* панель поднимается над клавиатурой (--kb); поле едет на видное место сразу, по высоте после подъёма, без ожидания конца анимации */
+  useLayoutEffect(() => {
+    if (!padOpen) return;
+    const sc = scrollRef.current;
+    const lim = limRef.current;
+    if (!sc || !lim) return;
+    const bottom = lim.getBoundingClientRect().bottom - sc.getBoundingClientRect().top + sc.scrollTop;
+    const top = Math.round(bottom + 16 - (sc.clientHeight - padH));
+    if (top > sc.scrollTop) sc.scrollTo({ top, behavior: 'smooth' });
+  }, [padOpen, padH]);
 
   const onKey = (raw: string) => {
     const mark = raw.charAt(raw.length - 1);
@@ -235,7 +244,7 @@ export const CategoryEditorSheet: React.FC<Props> = ({ target, onClose, onDelete
       >
         <div className="detail-dim" id="ce-dim" onClick={() => (padOpen ? closePad() : close())} />
         <Squircle r="32 32 0 0" className="detail-panel ce-panel" id="ce-panel" ref={panelRef as any}>
-          <div className="ce-scroll" id="ce-scroll" ref={scrollRef}>
+          <div className="ce-scroll" id="ce-scroll" ref={scrollRef} style={padOpen ? { paddingBottom: padH + 24 + 'px' } : undefined}>
             <div className="d-grab" />
             <div className="d-top">
               <span className="d-spacer" />
@@ -360,7 +369,8 @@ export const CategoryEditorSheet: React.FC<Props> = ({ target, onClose, onDelete
           </div>
         </Squircle>
       </div>
-      <CvPad open={padOpen && show} padRef={padRef} onKey={k => onKeyRef.current(k)} onTick={() => hp('light')} onClose={closePad} zIndex={50} />
+      <CvPad open={padOpen && show} padRef={padRef} onKey={k => onKeyRef.current(k)} onTick={() => hp('light')} onClose={closePad} zIndex={50} edge />
+      <div className={'ce-under' + (padOpen && show ? ' show' : '')} style={{ height: padH + 'px' }} />
       <IconPickerSheet
         open={pickOpen}
         onClose={() => setPickOpen(false)}
