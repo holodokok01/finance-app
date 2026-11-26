@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 
 const inTelegram = () => {
   const w = window as unknown as { Telegram?: { WebApp?: { platform?: string } } };
@@ -47,6 +47,30 @@ const setTgBg = (useSheet: boolean) => {
 
 export function useKeyboardInset(active: boolean): { height: number; kb: number; oy: number } {
   const [height, setHeight] = useState(0);
+  const prevH = useRef(0);
+
+  /* Telegram меняет окно сразу, а клавиатура iOS выезжает ~270 мс. Слой получает новую высоту мгновенно,
+     поэтому панель стартует со старого положения и едет на новое по кривой клавиатуры (translate, чтобы не трогать transform). */
+  useLayoutEffect(() => {
+    const prev = prevH.current;
+    prevH.current = active ? height : 0;
+    if (!active || !prev || !height || prev === height) return;
+    const panel = document.querySelector('.detail.show .detail-panel') as HTMLElement | null;
+    if (!panel || typeof panel.animate !== 'function') return;
+    let residual = 0;
+    const cur = getComputedStyle(panel).translate;
+    if (cur && cur !== 'none') residual = parseFloat(cur.split(' ')[1] || '0') || 0;
+    const from = Math.round(prev - height + residual);
+    panel.getAnimations().forEach(a => {
+      if (a.id === 'kb') a.cancel();
+    });
+    if (Math.abs(from) < 4) return;
+    const a = panel.animate([{ translate: '0 ' + from + 'px' }, { translate: '0 0' }], {
+      duration: 270,
+      easing: 'cubic-bezier(.35, .15, .35, 1)',
+    });
+    a.id = 'kb';
+  }, [height, active]);
 
   useEffect(() => {
     if (!active) return;
