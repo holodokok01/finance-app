@@ -355,7 +355,7 @@ export const CategoryEditorSheet: React.FC<Props> = ({ target, onClose, onDelete
               </Squircle>
             )}
           </div>
-          <div className="ce-foot" id="ce-foot">
+          <div className={'ce-foot' + (padOpen ? ' kb' : '')} id="ce-foot">
             {cur.k && (
               <button
                 className="pbtn danger"
