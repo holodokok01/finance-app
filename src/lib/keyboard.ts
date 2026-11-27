@@ -206,6 +206,9 @@ const write = (h: number, atRest: boolean) => {
 
 const frame = () => {
   raf = 0;
+  /* Замер на iPhone: после тапа по полю страница ~100 мс стоит без кадров (iOS готовит клавиатуру).
+     Отсчёт идёт от первого кадра после паузы, иначе подъём сразу перескакивает на середину. */
+  if (t0 < 0) t0 = performance.now() - 16;
   const p = Math.min(1, (performance.now() - t0) / dur);
   cur = from + (to - from) * ease(p);
   unscroll();
@@ -226,11 +229,12 @@ const animateTo = (target: number) => {
   }
   const now = performance.now();
   // поправка во время движения (настоящая высота клавиатуры отличилась от запомненной): доезжаем за оставшееся время
-  const left = raf ? dur - (now - t0) : 0;
+  const moving = raf && t0 >= 0;
+  const left = moving ? dur - (now - t0) : 0;
   from = cur;
   to = target;
-  t0 = now;
-  dur = raf ? Math.max(140, left) : DUR;
+  t0 = moving ? now : -1;
+  dur = moving ? Math.max(140, left) : DUR;
   if (!raf) raf = requestAnimationFrame(frame);
 };
 
