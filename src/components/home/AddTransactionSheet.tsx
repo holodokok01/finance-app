@@ -476,6 +476,7 @@ export const AddTransactionSheet: React.FC<AddTransactionSheetProps> = ({
 
           <div
             className="a-row"
+            data-kb-box
             ref={rowRef}
             onClick={e => {
               if ((e.target as HTMLElement).closest('#a-date') || e.target === noteInputRef.current) return;

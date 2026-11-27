@@ -39,11 +39,15 @@ const bez = (x1: number, y1: number, x2: number, y2: number) => {
 };
 const ease = bez(0.35, 0.15, 0.35, 1);
 
-const inTelegram = () => {
+const tgPlatform = () => {
   const w = window as unknown as { Telegram?: { WebApp?: { platform?: string } } };
-  const p = w.Telegram && w.Telegram.WebApp && w.Telegram.WebApp.platform;
+  return (w.Telegram && w.Telegram.WebApp && w.Telegram.WebApp.platform) || '';
+};
+const inTelegram = () => {
+  const p = tgPlatform();
   return !!p && p !== 'unknown';
 };
+const onIOS = () => tgPlatform() === 'ios' || /iPhone|iPad|iPod/.test(navigator.userAgent);
 
 export const isTextField = (el: EventTarget | null): el is HTMLElement => {
   const e = el as HTMLElement | null;
@@ -89,6 +93,81 @@ let sx = 0;
 let sy = 0;
 let timers: ReturnType<typeof setTimeout>[] = [];
 
+/* iOS при фокусе в поле, которое закроет клавиатура, сам прокручивает страницу к нему,
+   и модал дёргается туда и обратно. Поэтому клавиатуру открываем через невидимое поле
+   вверху экрана (его ничто не закрывает), а в настоящее поле фокус переходит,
+   когда модал уже поднялся над клавиатурой. */
+let proxy: HTMLInputElement | null = null;
+let pending: HTMLInputElement | HTMLTextAreaElement | null = null;
+let pendT: ReturnType<typeof setTimeout> | undefined;
+
+const getProxy = () => {
+  if (proxy && proxy.isConnected) return proxy;
+  proxy = document.createElement('input');
+  proxy.type = 'text';
+  proxy.setAttribute('aria-hidden', 'true');
+  proxy.tabIndex = -1;
+  proxy.style.cssText =
+    'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;border:0;padding:0;margin:0;font-size:16px;pointer-events:none;caret-color:transparent;z-index:-1';
+  document.body.appendChild(proxy);
+  return proxy;
+};
+
+const scrollParent = (el: HTMLElement) => {
+  let p = el.parentElement;
+  while (p && p !== document.body) {
+    const o = getComputedStyle(p).overflowY;
+    if ((o === 'auto' || o === 'scroll') && p.scrollHeight > p.clientHeight + 1) return p;
+    p = p.parentElement;
+  }
+  return null;
+};
+
+/* пока модал поднимается, поле едет вместе с ним и не уходит под клавиатуру */
+const keepInView = (el: HTMLElement, bottom: number) => {
+  const r = el.getBoundingClientRect();
+  const over = r.bottom - (bottom - 12);
+  if (over <= 0) return;
+  const sc = scrollParent(el);
+  if (sc) sc.scrollTop += Math.ceil(over);
+};
+
+const handOver = () => {
+  if (pendT) clearTimeout(pendT);
+  pendT = undefined;
+  const el = pending;
+  pending = null;
+  if (!el || !el.isConnected || document.activeElement !== proxy) return;
+  keepInView(el, cur);
+  const typed = proxy ? proxy.value : '';
+  el.focus({ preventScroll: true });
+  if (typed) {
+    // что успели набрать до перехода, дописываем в поле (React узнаёт через событие input)
+    const proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    const set = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+    const max = el.maxLength > 0 ? el.maxLength : 9999;
+    if (set) set.call(el, (el.value + typed).slice(0, max));
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  if (proxy) proxy.value = '';
+  try {
+    const n = el.value.length;
+    el.setSelectionRange(n, n);
+  } catch (e) {
+    /* ignore */
+  }
+};
+
+/* поле, к которому относится касание: само поле или строка-подпись вокруг него */
+const fieldOf = (t: HTMLElement | null) => {
+  if (!t || !t.closest) return null;
+  const own = t.closest('input, textarea') as HTMLElement | null;
+  if (own) return own;
+  if (t.closest('button, a, [role="button"]')) return null;
+  const box = t.closest('label, [data-kb-box]');
+  return box ? (box.querySelector('input:not([readonly]), textarea:not([readonly])') as HTMLElement | null) : null;
+};
+
 const winH = () => Math.min(window.innerHeight, document.documentElement.clientHeight || 99999);
 
 const savedKb = () => {
@@ -131,7 +210,9 @@ const frame = () => {
   cur = from + (to - from) * ease(p);
   unscroll();
   write(cur, p >= 1);
+  if (pending) keepInView(pending, cur);
   if (p < 1) raf = requestAnimationFrame(frame);
+  else if (pending) handOver();
 };
 
 const animateTo = (target: number) => {
@@ -204,12 +285,32 @@ const onTouchStart = (e: TouchEvent) => {
 
 // Подъём на отпускании пальца над полем: клавиатура стартует в этот же момент
 const onTouchEnd = (e: TouchEvent) => {
-  const t = e.target as HTMLElement | null;
-  const field = t && t.closest ? (t.closest('input, textarea') as HTMLElement | null) : null;
+  const field = fieldOf(e.target as HTMLElement | null);
   if (!field || !isTextField(field) || !inSheet(field) || focused) return;
   if ((field as HTMLInputElement).readOnly || (field as HTMLInputElement).disabled) return;
   const c = e.changedTouches[0];
   if (!c || Math.abs(c.clientX - sx) > 10 || Math.abs(c.clientY - sy) > 10) return;
+  const kbH = savedKb() || Math.round(fullH * 0.42);
+  // поле окажется под клавиатурой: открываем её через невидимое поле вверху, без прокрутки iOS
+  if (onIOS() && e.cancelable && field.getBoundingClientRect().bottom > fullH - kbH - 12) {
+    e.preventDefault();
+    const px = getProxy();
+    const f = field as HTMLInputElement;
+    px.value = '';
+    px.enterKeyHint = f.enterKeyHint || '';
+    px.autocapitalize = f.autocapitalize || 'sentences';
+    px.inputMode = f.inputMode || '';
+    px.focus({ preventScroll: true });
+    if (document.activeElement === px) {
+      pending = f;
+      focused = true;
+      setTgBg(true);
+      measure();
+      if (pendT) clearTimeout(pendT);
+      pendT = setTimeout(handOver, DUR + 150);
+      return;
+    }
+  }
   focused = true;
   setTgBg(true);
   measure();
@@ -225,6 +326,7 @@ const onTouchEnd = (e: TouchEvent) => {
 
 const onFocusOut = (e: FocusEvent) => {
   if (focused && !isTextField(e.relatedTarget)) {
+    pending = null;
     focused = false;
     setTgBg(false);
     measure();
@@ -245,7 +347,7 @@ const start = () => {
   document.addEventListener('focusin', onFocusIn);
   document.addEventListener('focusout', onFocusOut);
   document.addEventListener('touchstart', onTouchStart, { passive: true, capture: true });
-  document.addEventListener('touchend', onTouchEnd, { passive: true, capture: true });
+  document.addEventListener('touchend', onTouchEnd, { passive: false, capture: true });
   vv?.addEventListener('resize', onResize);
   vv?.addEventListener('scroll', unscroll);
   // модал открылся, когда поле уже в фокусе (редко): подхватываем
@@ -270,6 +372,9 @@ const stop = () => {
   timers.forEach(clearTimeout);
   timers = [];
   if (armT) clearTimeout(armT);
+  if (pendT) clearTimeout(pendT);
+  pending = null;
+  if (proxy && document.activeElement === proxy) proxy.blur();
   if (raf) cancelAnimationFrame(raf);
   raf = 0;
   if (focused) setTgBg(false);
