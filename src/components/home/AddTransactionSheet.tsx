@@ -167,10 +167,18 @@ export const AddTransactionSheet: React.FC<AddTransactionSheetProps> = ({
       }
       wasOverRef.current = false;
 
+      // два кадра и расчёт стилей: панель успевает встать в стартовое положение, переход не пропускается
+      let raf2 = 0;
       const raf = requestAnimationFrame(() => {
-        setShowClass(true);
+        raf2 = requestAnimationFrame(() => {
+          void document.body.offsetWidth;
+          setShowClass(true);
+        });
       });
-      return () => cancelAnimationFrame(raf);
+      return () => {
+        cancelAnimationFrame(raf);
+        cancelAnimationFrame(raf2);
+      };
     } else {
       setShowClass(false);
       const timer = setTimeout(() => {
@@ -180,8 +188,8 @@ export const AddTransactionSheet: React.FC<AddTransactionSheetProps> = ({
     }
   }, [isOpen, editTransaction, initialType, categoryOrder, todayMidnight]);
 
-  // Клавиатура: слой следует за окном Telegram, как у остальных модалов
-  const { height: layerH } = useKeyboardInset(isOpen);
+  // Клавиатура: высоту слоя ведёт общий менеджер (src/lib/keyboard.ts)
+  useKeyboardInset(isOpen);
 
   // Over budget shake & haptic error
   useEffect(() => {
@@ -389,7 +397,6 @@ export const AddTransactionSheet: React.FC<AddTransactionSheetProps> = ({
         className={`detail ${showClass ? 'show' : ''}`}
         id="add"
         aria-hidden={!isOpen}
-        style={{ height: layerH ? layerH + 'px' : '100%' }}
       >
         <div className="detail-dim" id="add-dim" onClick={onClose} />
         <Squircle

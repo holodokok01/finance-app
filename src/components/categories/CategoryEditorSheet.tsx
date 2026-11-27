@@ -5,6 +5,7 @@ import { IconPickerSheet } from './IconPickerSheet';
 import { CvPad } from '../converter/CvPad';
 import { usePullToClose } from '../../hooks/usePullToClose';
 import { useSheetPresence } from '../../hooks/useSheetPresence';
+import { keyboardRestHeight } from '../../lib/keyboard';
 import { useAppStore } from '../../store/useAppStore';
 import { useSettingsStore } from '../../store/useSettingsStore';
 import { toast } from '../../store/useToastStore';
@@ -98,10 +99,12 @@ export const CategoryEditorSheet: React.FC<Props> = ({ target, onClose, onDelete
     const foot = det ? (det.querySelector('.ce-foot') as HTMLElement | null) : null;
     if (!sc || !lim || !det || !foot) return;
     /* высота области прокрутки после подъёма: шит минус верхний отступ, клавиатура и кнопки; текущую высоту не берём, она ещё анимируется */
-    const visible = det.clientHeight - 48 - padH - foot.offsetHeight;
+    /* системная клавиатура при этом убирается, поэтому берём высоту слоя без неё */
+    const visible = keyboardRestHeight() - 48 - padH - foot.offsetHeight;
     const bottom = lim.getBoundingClientRect().bottom - sc.getBoundingClientRect().top + sc.scrollTop;
-    const top = Math.round(bottom + 16 - visible);
-    if (top > sc.scrollTop) sc.scrollTo({ top, behavior: 'smooth' });
+    /* поле встаёт прямо над кнопками; если список уже прокручен ниже (после системной клавиатуры), возвращаем назад */
+    const top = Math.max(0, Math.round(bottom + 16 - visible));
+    if (Math.abs(top - sc.scrollTop) > 1) sc.scrollTo({ top, behavior: 'smooth' });
   }, [padOpen, padH]);
 
   const onKey = (raw: string) => {

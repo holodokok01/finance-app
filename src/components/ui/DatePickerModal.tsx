@@ -44,10 +44,18 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setRendered(true);
+      // два кадра и расчёт стилей: панель успевает встать в стартовое положение, переход не пропускается
+      let raf2 = 0;
       const raf = requestAnimationFrame(() => {
-        setShowClass(true);
+        raf2 = requestAnimationFrame(() => {
+          void document.body.offsetWidth;
+          setShowClass(true);
+        });
       });
-      return () => cancelAnimationFrame(raf);
+      return () => {
+        cancelAnimationFrame(raf);
+        cancelAnimationFrame(raf2);
+      };
     } else {
       setShowClass(false);
       const timer = setTimeout(() => {

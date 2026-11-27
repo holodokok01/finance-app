@@ -93,6 +93,7 @@ export const TransactionDetailSheet: React.FC<TransactionDetailSheetProps> = ({ 
       setRendered(true);
       const raf = requestAnimationFrame(() => {
         requestAnimationFrame(() => {
+          void document.body.offsetWidth;
           setShow(true);
           hp('light');
         });
@@ -145,14 +146,12 @@ export const TransactionDetailSheet: React.FC<TransactionDetailSheetProps> = ({ 
           setFade(false);
           return;
         }
-        panel.style.height = '';
         const h1 = panel.offsetHeight;
-        panel.style.height = h0 + 'px';
-        void panel.offsetHeight;
-        panel.style.height = h1 + 'px';
         setFade(false);
+        if (h0 && h1 && h0 !== h1 && typeof panel.animate === 'function') {
+          panel.animate([{ height: h0 + 'px' }, { height: h1 + 'px' }], { duration: 280, easing: 'ease' });
+        }
         heightTimerRef.current = setTimeout(() => {
-          panel.style.height = '';
           switchingRef.current = false;
         }, 300);
       });

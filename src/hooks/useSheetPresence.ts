@@ -16,6 +16,7 @@ export function useSheetPresence(open: boolean, onShow?: () => void) {
       let r2 = 0;
       const r1 = requestAnimationFrame(() => {
         r2 = requestAnimationFrame(() => {
+          void document.body.offsetWidth;
           setShow(true);
           if (onShow) onShow();
         });
