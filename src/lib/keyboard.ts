@@ -10,7 +10,7 @@
  * --app-h прямо на слои, без перерисовки React.
  */
 
-const DUR = 320;
+const DUR = 420;
 const KB_KEY = 'kb_h';
 
 /* cubic-bezier(.35, .15, .35, 1): подобрана по кадрам записи экрана iPhone */
@@ -37,8 +37,8 @@ const bez = (x1: number, y1: number, x2: number, y2: number) => {
     return sy(Math.min(1, Math.max(0, t)));
   };
 };
-/* модал поднимается уже после клавиатуры, мягким замедлением, как открытие модала */
-const ease = bez(0.2, 0.8, 0.2, 1);
+/* модал поднимается уже после клавиатуры: мягкий разгон и мягкое торможение, без рывка в первом кадре */
+const ease = bez(0.4, 0, 0.2, 1);
 
 const tgPlatform = () => {
   const w = window as unknown as { Telegram?: { WebApp?: { platform?: string } } };
