@@ -10,7 +10,7 @@
  * --app-h прямо на слои, без перерисовки React.
  */
 
-const DUR = 270;
+const DUR = 320;
 const KB_KEY = 'kb_h';
 
 /* cubic-bezier(.35, .15, .35, 1): подобрана по кадрам записи экрана iPhone */
@@ -37,7 +37,8 @@ const bez = (x1: number, y1: number, x2: number, y2: number) => {
     return sy(Math.min(1, Math.max(0, t)));
   };
 };
-const ease = bez(0.35, 0.15, 0.35, 1);
+/* модал поднимается уже после клавиатуры, мягким замедлением, как открытие модала */
+const ease = bez(0.2, 0.8, 0.2, 1);
 
 const tgPlatform = () => {
   const w = window as unknown as { Telegram?: { WebApp?: { platform?: string } } };
@@ -61,7 +62,9 @@ export const isTextField = (el: EventTarget | null): el is HTMLElement => {
 const inSheet = (t: EventTarget | null) => !!(t as HTMLElement | null)?.closest?.('.detail, .sheet');
 
 /** Цвет фона Telegram под окном: на время клавиатуры как у модала, чтобы у скруглённых углов клавиатуры не было чёрного */
+let bgOn = false;
 const setTgBg = (useSheet: boolean) => {
+  bgOn = useSheet;
   const w = window as unknown as {
     Telegram?: { WebApp?: { setBackgroundColor?: (c: string) => void; setBottomBarColor?: (c: string) => void } };
   };
@@ -202,6 +205,7 @@ const write = (h: number, atRest: boolean) => {
   // в покое значение лежит и на корне: модал, открытый уже при клавиатуре, сразу встанет на место
   if (free) root.style.removeProperty('--app-h');
   else if (atRest) root.style.setProperty('--app-h', px);
+  if (free && bgOn) setTgBg(false);
 };
 
 const frame = () => {
@@ -252,10 +256,10 @@ const measure = () => {
       /* ignore */
     }
   }
-  // поле уже в фокусе, а окно ещё полное: поднимаемся на запомненную высоту клавиатуры вместе с ней
-  if (focused && kb <= 80) h = fullH - (savedKb() || Math.round(fullH * 0.42));
-  // клавиатура убрана, а окно ещё не вернулось: сразу едем вниз вместе с ней
-  if (!focused && tg) h = Math.max(h, fullH);
+  /* Не угадываем клавиатуру: пока она едет, модал стоит на месте (она выезжает поверх).
+     Telegram уменьшает окно, когда клавиатура встала, и только тогда модал плавно поднимается.
+     При закрытии так же: модал опускается, когда окно вернулось. */
+  if (focused && kb <= 80) h = fullH;
   animateTo(h);
 };
 
@@ -311,7 +315,8 @@ const onTouchEnd = (e: TouchEvent) => {
       setTgBg(true);
       measure();
       if (pendT) clearTimeout(pendT);
-      pendT = setTimeout(handOver, DUR + 150);
+      // запасной переход, если Telegram так и не уменьшил окно
+      pendT = setTimeout(handOver, 1400);
       return;
     }
   }
@@ -322,7 +327,6 @@ const onTouchEnd = (e: TouchEvent) => {
   armT = setTimeout(() => {
     if (document.activeElement !== field && !isTextField(document.activeElement)) {
       focused = false;
-      setTgBg(false);
       measure();
     }
   }, 500);
@@ -332,7 +336,7 @@ const onFocusOut = (e: FocusEvent) => {
   if (focused && !isTextField(e.relatedTarget)) {
     pending = null;
     focused = false;
-    setTgBg(false);
+    // фон Telegram вернётся, когда слой опустится (write)
     measure();
   }
   later();
